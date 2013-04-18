@@ -317,8 +317,6 @@ $cinder                  = true
 # 'storage_only'    -> storage nodes will run cinder
 # 'all'             -> compute, controller, and storage nodes will run cinder (excluding swif
 # 'list'           -> specify list of nodes to run cinder
-#!## Should we install cinder on compute nodes?
-#!#$cinder_on_computes      = false
 $cinder_nodes          = 'controller_only'
 
 if $cinder_nodes == 'list' {

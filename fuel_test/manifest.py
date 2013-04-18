@@ -197,7 +197,8 @@ class Manifest(object):
     def write_openstack_simple_manifest(self, remote, ci, controllers,
                                         use_syslog=True,
                                         quantum=True,
-                                        cinder=True, cinder_on_computes=False):
+                                        cinder=True, cinder_nodes='controller_only',
+					cinder_node_list=false):
         template = Template(
             root(
                 'deployment', 'puppet', 'openstack', 'examples',
@@ -211,7 +212,8 @@ class Manifest(object):
             #controller_node_address=controllers[0].get_ip_address_by_network_name('internal'),
             #controller_node_public=controllers[0].get_ip_address_by_network_name('public'),
             cinder=cinder,
-            cinder_on_computes=cinder_on_computes,
+            cinder_nodes=cinder_nodes,
+            cinder_node_list=cinder_node_list,
             nv_physical_volume=self.physical_volumes(),
             nagios_master = controllers[0].name + '.your-domain-name.com',
             external_ipinfo=self.external_ip_info(ci, controllers),
