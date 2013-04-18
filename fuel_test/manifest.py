@@ -198,7 +198,7 @@ class Manifest(object):
                                         use_syslog=True,
                                         quantum=True,
                                         cinder=True, cinder_nodes='controller_only',
-					cinder_node_list=false):
+					cinder_node_list=False):
         template = Template(
             root(
                 'deployment', 'puppet', 'openstack', 'examples',
