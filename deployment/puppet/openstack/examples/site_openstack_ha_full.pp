@@ -311,8 +311,24 @@ $deployment_id = '99'
 # Consult openstack docs for differences between them
 $cinder                  = true
 
-# Should we install cinder on compute nodes?
-$cinder_on_computes      = false
+# Choose which nodes to install cinder onto
+# 'compute_only'    -> compute nodes will run cinder
+# 'controller_only' -> controller nodes will run cinder
+# 'storage_only'    -> storage nodes will run cinder
+# 'all'             -> compute, controller, and storage nodes will run cinder (excluding swif
+# 'list'           -> specify list of nodes to run cinder
+#!## Should we install cinder on compute nodes?
+#!#$cinder_on_computes      = false
+$cinder_nodes          = 'controller_only'
+
+if $cinder_nodes == 'list' {
+  #Specify a list of nodes for running cinder
+  #May be specified by role, hostname, or internal_address
+  $cinder_node_list    = [ 'fuel-controller-03', 'storage', '10.0.0.105' ]
+} else {
+  #Do not change
+  $cinder_node_list    = false
+}
 
 #Set it to true if your want cinder-volume been installed to the host
 #Otherwise it will install api and scheduler services
@@ -560,6 +576,7 @@ class ha_controller (
     tenant_network_type     => $tenant_network_type,
     segment_range           => $segment_range,
     cinder                  => $cinder,
+    cinder_node_list        => $cinder_node_list,
     cinder_iscsi_bind_addr  => $cinder_iscsi_bind_addr,
     manage_volumes          => $manage_volumes,
     galera_nodes            => $controller_hostnames,
@@ -631,7 +648,6 @@ node /fuel-compute-[\d+]/ {
     vncproxy_host          => $public_virtual_ip,
     verbose                => $verbose,
     vnc_enabled            => true,
-    manage_volumes         => $manage_volumes,
     nova_user_password     => $nova_user_password,
     cache_server_ip        => $controller_hostnames,
     service_endpoint       => $internal_virtual_ip,
@@ -641,10 +657,13 @@ node /fuel-compute-[\d+]/ {
     quantum_user_password  => $quantum_user_password,
     tenant_network_type    => $tenant_network_type,
     segment_range          => $segment_range,
-    cinder                 => $cinder_on_computes,
+    cinder                 => $cinder,
+    cinder_node_list       => $cinder_node_list,
     cinder_iscsi_bind_addr => $cinder_iscsi_bind_addr,
+    manage_volumes         => $manage_volumes,
     nv_physical_volume     => $nv_physical_volume,
     db_host                => $internal_virtual_ip,
+    cinder_rate_limits     => $cinder_rate_limits,
     ssh_private_key        => 'puppet:///ssh_keys/openstack',
     ssh_public_key         => 'puppet:///ssh_keys/openstack.pub',
     use_syslog             => $use_syslog,
@@ -681,10 +700,23 @@ node /fuel-swift-[\d+]/ {
   $swift_zone = $node[0]['swift_zone']
 
   class { 'openstack::swift::storage_node':
-    storage_type       => $swift_loopback,
-    swift_zone         => $swift_zone,
-    swift_local_net_ip => $internal_address,
+    storage_type           => $swift_loopback,
+    swift_zone             => $swift_zone,
+    swift_local_net_ip     => $internal_address,
     master_swift_proxy_ip  => $master_swift_proxy_ip,
+    cinder                 => $cinder,
+    cinder_node_list       => $cinder_node_list,
+    cinder_iscsi_bind_addr => $cinder_iscsi_bind_addr,
+    manage_volumes         => $manage_volumes,
+    nv_physical_volume     => $nv_physical_volume,
+    db_host                => $internal_virtual_ip,
+    service_endpoint       => $internal_virtual_ip,
+    nova_rate_limits       => $nova_rate_limits,
+    cinder_rate_limits     => $cinder_rate_limits,
+    rabbit_nodes           => $controller_hostnames,
+    rabbit_password        => $rabbit_password,
+    rabbit_user            => $rabbit_user,
+    rabbit_ha_virtual_ip   => $internal_virtual_ip,
   }
 
 }

@@ -84,19 +84,20 @@ class openstack::compute (
   $quantum_user_password         = false,
   $tenant_network_type           = 'gre',
   $segment_range                 = '1:4094',
-  $cinder              = false,
   # nova compute configuration parameters
   $verbose             = false,
-  $manage_volumes      = false,
-  $nv_physical_volume  = undef,
-  $cinder_volume_group = 'cinder-volumes',
+  $service_endpoint    = '127.0.0.1',
+  $ssh_private_key     = undef,
   $cache_server_ip     = ['127.0.0.1'],
   $cache_server_port   = '11211',
   $nova_volume         = 'nova-volumes',
-  $service_endpoint    = '127.0.0.1',
-  $ssh_private_key     = undef,
   $ssh_public_key      = undef,
   # if the cinder management components should be installed
+  $manage_volumes          = false,
+  $nv_physical_volume      = undef,
+  $cinder_volume_group     = 'cinder-volumes',
+  $cinder                  = false,
+  $cinder_node_list        = false,
   $cinder_user_password    = 'cinder_user_pass',
   $cinder_db_password      = 'cinder_db_pass',
   $cinder_db_user          = 'cinder',
@@ -104,9 +105,9 @@ class openstack::compute (
   $cinder_iscsi_bind_addr  = false,
   $db_host                 = '127.0.0.1',
   $use_syslog              = false,
-  $nova_rate_limits = undef,
-  $cinder_rate_limits = undef,
-  $create_networks = false
+  $nova_rate_limits        = undef,
+  $cinder_rate_limits      = undef,
+  $create_networks         = false
 ) {
 
   #
@@ -158,6 +159,25 @@ class openstack::compute (
     value => $memcached_addresses
   }
 
+  #Evaluate cinder node selection
+  if ($cinder == 'compute_only') or ($cinder == 'all') {
+    $cinder = true
+  } elsif ($cinder == 'list') and ($cinder_node_list) {
+    if (member($cinder_node_list,'compute')) {
+      $cinder = true
+    } elsif (member($cinder_node_list,$::hostname)) {
+      $cinder = true
+    } elsif (member($cinder_node_list,$internal_address)) {
+      $cinder = true
+    } else {
+      $cinder = false
+    }
+  } else {
+    $cinder = false
+  }
+
+
+
 
   class { 'nova':
     ensure_package     => $::openstack_version['nova'],
@@ -174,10 +194,9 @@ class openstack::compute (
     rabbit_ha_virtual_ip => $rabbit_ha_virtual_ip,
   }
 
+  #Cinder setup
   if ($cinder) {
-
     $enabled_apis = 'metadata'
-
     package {'python-cinderclient': ensure => present}
     class {'openstack::cinder':
       sql_connection       => "mysql://${cinder_db_user}:${cinder_db_password}@${db_host}/${cinder_db_dbname}?charset=utf8",
