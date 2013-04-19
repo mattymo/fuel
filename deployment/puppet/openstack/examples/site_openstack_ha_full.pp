@@ -312,21 +312,14 @@ $deployment_id = '99'
 $cinder                  = true
 
 # Choose which nodes to install cinder onto
-# 'compute_only'    -> compute nodes will run cinder
-# 'controller_only' -> controller nodes will run cinder
-# 'storage_only'    -> storage nodes will run cinder
-# 'all'             -> compute, controller, and storage nodes will run cinder (excluding swif
-# 'list'           -> specify list of nodes to run cinder
-$cinder_nodes          = 'controller_only'
+# 'compute'            -> compute nodes will run cinder
+# 'controller'         -> controller nodes will run cinder
+# 'storage'            -> storage nodes will run cinder
+# 'fuel-controller-XX' -> specify particular host(s) by hostname
+# 'XXX.XXX.XXX.XXX'    -> specify particular host(s) by IP address
+# 'all'                -> compute, controller, and storage nodes will run cinder (excluding swif
 
-if $cinder_nodes == 'list' {
-  #Specify a list of nodes for running cinder
-  #May be specified by role, hostname, or internal_address
-  $cinder_node_list    = [ 'fuel-controller-03', 'storage', '10.0.0.105' ]
-} else {
-  #Do not change
-  $cinder_node_list    = false
-}
+$cinder_nodes          = [ 'controller' ]
 
 #Set it to true if your want cinder-volume been installed to the host
 #Otherwise it will install api and scheduler services
@@ -574,7 +567,7 @@ class ha_controller (
     tenant_network_type     => $tenant_network_type,
     segment_range           => $segment_range,
     cinder                  => $cinder,
-    cinder_node_list        => $cinder_node_list,
+    cinder_nodes            => $cinder_nodes,
     cinder_iscsi_bind_addr  => $cinder_iscsi_bind_addr,
     manage_volumes          => $manage_volumes,
     galera_nodes            => $controller_hostnames,
@@ -656,7 +649,7 @@ node /fuel-compute-[\d+]/ {
     tenant_network_type    => $tenant_network_type,
     segment_range          => $segment_range,
     cinder                 => $cinder,
-    cinder_node_list       => $cinder_node_list,
+    cinder_nodes           => $cinder_nodes,
     cinder_iscsi_bind_addr => $cinder_iscsi_bind_addr,
     manage_volumes         => $manage_volumes,
     nv_physical_volume     => $nv_physical_volume,
@@ -703,7 +696,7 @@ node /fuel-swift-[\d+]/ {
     swift_local_net_ip     => $internal_address,
     master_swift_proxy_ip  => $master_swift_proxy_ip,
     cinder                 => $cinder,
-    cinder_node_list       => $cinder_node_list,
+    cinder_nodes           => $cinder_nodes,
     cinder_iscsi_bind_addr => $cinder_iscsi_bind_addr,
     manage_volumes         => $manage_volumes,
     nv_physical_volume     => $nv_physical_volume,

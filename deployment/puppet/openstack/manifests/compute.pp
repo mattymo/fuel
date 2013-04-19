@@ -97,7 +97,7 @@ class openstack::compute (
   $nv_physical_volume      = undef,
   $cinder_volume_group     = 'cinder-volumes',
   $cinder                  = false,
-  $cinder_node_list        = false,
+  $cinder_nodes            = false,
   $cinder_user_password    = 'cinder_user_pass',
   $cinder_db_password      = 'cinder_db_pass',
   $cinder_db_user          = 'cinder',
@@ -162,12 +162,12 @@ class openstack::compute (
   #Evaluate cinder node selection
   if ($cinder == 'compute_only') or ($cinder == 'all') {
     $cinder = true
-  } elsif ($cinder == 'list') and ($cinder_node_list) {
-    if (member($cinder_node_list,'compute')) {
+  } elsif (is_array($cinder_nodes)) {
+    if (member($cinder_nodes,'compute')) {
       $cinder = true
-    } elsif (member($cinder_node_list,$::hostname)) {
+    } elsif (member($cinder_nodes,$::hostname)) {
       $cinder = true
-    } elsif (member($cinder_node_list,$internal_address)) {
+    } elsif (member($cinder_nodes,$internal_address)) {
       $cinder = true
     } else {
       $cinder = false

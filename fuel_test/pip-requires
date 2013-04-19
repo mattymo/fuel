@@ -2,3 +2,4 @@ nose
 python-glanceclient
 python-keystoneclient
 git+ssh://git@github.com/Mirantis/devops.git@stable
+Django==1.4.3

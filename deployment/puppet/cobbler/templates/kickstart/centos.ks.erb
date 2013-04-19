@@ -7,7 +7,7 @@ $SNIPPET('url_proxy')
 # ALTERNATIVE REPOSITORIES
 <% if ks_repo.kind_of?(Array)  %>
   <% ks_repo.each do |repo| %>
-repo --name=<%= repo['name'] %> --baseurl=<%= repo['url'] %>
+repo --name=<%= repo['name'] %> --baseurl=<%= repo['url'] %> --proxy=http://172.18.8.231:3128
   <% end %>
 <% else %>
   # No repos add
