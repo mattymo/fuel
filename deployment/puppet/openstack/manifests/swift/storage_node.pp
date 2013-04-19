@@ -15,7 +15,7 @@ class openstack::swift::storage_node (
   $loopback_size        = '1048756',
   # if the cinder management components should be installed
   $cinder                  = false,
-  $cinder_node_list        = false,
+  $cinder_nodes            = false,
   $manage_volumes          = false,
   $nv_physical_volume      = undef,
   $cinder_volume_group     = 'cinder-volumes',
@@ -74,25 +74,25 @@ class openstack::swift::storage_node (
     }
     Swift::Ringsync <| |> ~> Class["swift::storage::all"]
   }
- 
+
   #Evaluate cinder node selection
-  if ($cinder == 'storage_only') or ($cinder == 'all') {
-    $cinder = true
-  }
-  elsif ($cinder == 'list') and ($cinder_node_list) {
-    if (member($cinder_node_list,'storage')) {
+  if ($cinder) {
+    if ($cinder_nodes == 'storage') or ($cinder_nodes == 'all') or (member($cinder_nodes,'all')) {
       $cinder = true
-    } elsif (member($cinder_node_list,$::hostname)) {
-      $cinder = true
-    } elsif (member($cinder_node_list,$::ipaddress_eth0)) {
-      $cinder = true
+    } elsif (is_array($cinder_nodes)) {
+      if (member($cinder_nodes,'storage')) {
+        $cinder = true
+      } elsif (member($cinder_nodes,$::hostname)) {
+        $cinder = true
+      } elsif (member($cinder_nodes,$internal_address)) {
+        $cinder = true
+      } else {
+        $cinder = false
+      }
     } else {
       $cinder = false
     }
-  } else {
-    $cinder = false
   }
-  
 
   $enabled_apis = 'ec2,osapi_compute'
   if ($cinder) and !defined(Class['swift']) {

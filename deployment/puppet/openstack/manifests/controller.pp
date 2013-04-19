@@ -128,7 +128,7 @@ class openstack::controller (
   $cache_server_port       = '11211',
   $swift                   = false,
   $cinder                  = false,
-  $cinder_node_list        = false,
+  $cinder_nodes            = false,
   $horizon_app_links       = undef,
   # General
   $verbose                 = 'False',
@@ -185,26 +185,25 @@ class openstack::controller (
   
   nova_config {'DEFAULT/memcached_servers':    value => $memcached_addresses;
   }
- 
+
   #Evaluate cinder node selection
-  if ($cinder == 'controller_only') or ($cinder == 'all') { 
-    $cinder = true 
-  } 
-  elsif ($cinder == 'list') and ($cinder_node_list) {
-    if (member($cinder_node_list,'controller')) {
+  if ($cinder) {
+    if ($cinder_nodes == 'controller') or ($cinder_nodes == 'all') or (member($cinder,'all')) {
       $cinder = true
-    } elsif (member($cinder_node_list,$::hostname)) {
-      $cinder = true
-    } elsif (member($cinder_node_list,$internal_address)) {
-      $cinder = true
+    } elsif (is_array($cinder_nodes)) {
+      if (member($cinder_nodes,'controller')) {
+        $cinder = true
+      } elsif (member($cinder_nodes,$::hostname)) {
+        $cinder = true
+      } elsif (member($cinder_nodes,$internal_address)) {
+        $cinder = true
+      } else {
+        $cinder = false
+      }
     } else {
       $cinder = false
     }
-  } else {
-    $cinder = false
   }
-      
-   
 
 
   ####### DATABASE SETUP ######

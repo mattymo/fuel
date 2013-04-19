@@ -160,20 +160,22 @@ class openstack::compute (
   }
 
   #Evaluate cinder node selection
-  if ($cinder == 'compute_only') or ($cinder == 'all') {
-    $cinder = true
-  } elsif (is_array($cinder_nodes)) {
-    if (member($cinder_nodes,'compute')) {
+  if ($cinder) {
+    if ($cinder_nodes == 'compute') or ($cinder_nodes == 'all') or (member($cinder_nodes,'all')) {
       $cinder = true
-    } elsif (member($cinder_nodes,$::hostname)) {
-      $cinder = true
-    } elsif (member($cinder_nodes,$internal_address)) {
-      $cinder = true
+    } elsif (is_array($cinder_nodes)) {
+      if (member($cinder_nodes,'compute')) {
+        $cinder = true
+      } elsif (member($cinder_nodes,$::hostname)) {
+        $cinder = true
+      } elsif (member($cinder_nodes,$internal_address)) {
+        $cinder = true
+      } else {
+        $cinder = false
+      }
     } else {
       $cinder = false
     }
-  } else {
-    $cinder = false
   }
 
 
