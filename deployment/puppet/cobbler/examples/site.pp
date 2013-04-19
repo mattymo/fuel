@@ -5,7 +5,7 @@
 #
 
 # Fast mirror for your location, it will be used to download packages
-$fast_mirror         = 'http://172.18.67.168/ubuntu-repo/mirror.yandex.ru/ubuntu'
+$fast_mirror         = 'http://172.18.3.14/ubuntu-repo/mirror.yandex.ru/ubuntu'
 
 # [server] IP address that will be used as address of cobbler server.
 # It is needed to download kickstart files, call cobbler API and
@@ -89,7 +89,7 @@ node fuel-cobbler {
     # }
 
     class { 'cobbler::distro::centos63_x86_64':
-      http_iso => 'http://172.18.67.168/CentOS-6.3-x86_64-minimal.iso',
+      http_iso => 'http://172.18.3.14/CentOS-6.3-x86_64-minimal.iso',
       ks_url   => 'cobbler',
     }
 
@@ -104,7 +104,7 @@ node fuel-cobbler {
       Class['cobbler::profile::ubuntu_1204_x86_64']
 
       class { 'cobbler::distro::ubuntu_1204_x86_64' :
-        http_iso => 'http://172.18.67.168/mini.iso',
+        http_iso => 'http://172.18.3.14/mini.iso',
         require  => Class[cobbler],
         ks_url   => $fast_mirror,
       }
