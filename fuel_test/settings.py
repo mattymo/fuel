@@ -60,8 +60,8 @@ ADMIN_TENANT_FOLSOM = 'admin'
 CIRROS_IMAGE = 'http://srv08-srt.srt.mirantis.net/cirros-0.3.0-x86_64-disk.img'
 CONTROLLERS = int(os.environ.get('CONTROLLERS', 3))
 COMPUTES = int(os.environ.get('COMPUTES', 1))
-STORAGES = int(os.environ.get('STORAGES', 0))
-PROXIES = int(os.environ.get('PROXIES', 0))
+STORAGES = int(os.environ.get('STORAGES', 1))
+PROXIES = int(os.environ.get('PROXIES', 1))
 
 EMPTY_SNAPSHOT = os.environ.get('EMPTY_SNAPSHOT', 'empty')
 OPENSTACK_SNAPSHOT = os.environ.get('OPENSTACK_SNAPSHOT', 'openstack')
