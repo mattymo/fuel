@@ -162,20 +162,22 @@ class openstack::compute (
   #Evaluate cinder node selection
   if ($cinder) {
     if ($cinder_nodes == 'compute') or ($cinder_nodes == 'all') or (member($cinder_nodes,'all')) {
-      $cinder = true
+      $cinder_compute = true
     } elsif (is_array($cinder_nodes)) {
       if (member($cinder_nodes,'compute')) {
-        $cinder = true
+        $cinder_compute = true
       } elsif (member($cinder_nodes,$::hostname)) {
-        $cinder = true
+        $cinder_compute = true
       } elsif (member($cinder_nodes,$internal_address)) {
-        $cinder = true
+        $cinder_compute = true
       } else {
-        $cinder = false
+        $cinder_compute = false
       }
     } else {
-      $cinder = false
+      $cinder_compute = false
     }
+  } else {
+    $cinder_compute = false
   }
 
 
@@ -197,7 +199,7 @@ class openstack::compute (
   }
 
   #Cinder setup
-  if ($cinder) {
+  if ($cinder_compute) {
     $enabled_apis = 'metadata'
     package {'python-cinderclient': ensure => present}
     class {'openstack::cinder':
@@ -428,4 +430,3 @@ class openstack::compute (
     }
   }
 }
-

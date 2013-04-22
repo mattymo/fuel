@@ -73,7 +73,7 @@ node fuel-cobbler {
         },
         {
         "name" => "Epel",
-        "url"  => "http://172.18.3.14/centos-repo/epel",
+        "url"  => "http://172.18.67.168/centos-repo/epel",
         }
       ]
     }

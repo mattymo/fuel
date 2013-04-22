@@ -32,30 +32,43 @@ $nodes_harr = [
     'role' => 'master',
     'internal_address' => '10.0.0.101',
     'public_address'   => '10.0.204.101',
+    'mountpoints'=> "1 1\n2 1",
+    'storage_local_net_ip' => '10.0.0.101',
   },
   {
     'name' => 'fuel-cobbler',
     'role' => 'cobbler',
     'internal_address' => '10.0.0.102',
     'public_address'   => '10.0.204.102',
+    'mountpoints'=> "1 1\n2 1",
+    'storage_local_net_ip' => '10.0.0.102',
   },
   {
     'name' => 'fuel-controller-01',
     'role' => 'primary-controller',
     'internal_address' => '10.0.0.103',
     'public_address'   => '10.0.204.103',
+    'swift_zone'       => 1,
+    'mountpoints'=> "1 1\n2 1",
+    'storage_local_net_ip' => '10.0.0.103',
   },
   {
     'name' => 'fuel-controller-02',
     'role' => 'controller',
     'internal_address' => '10.0.0.104',
     'public_address'   => '10.0.204.104',
+    'swift_zone'       => 2,
+    'mountpoints'=> "1 2\n 2 1",
+    'storage_local_net_ip' => '10.0.0.110',
   },
   {
     'name' => 'fuel-controller-03',
     'role' => 'controller',
     'internal_address' => '10.0.0.105',
     'public_address'   => '10.0.204.105',
+    'swift_zone'       => 3,
+    'mountpoints'=> "1 2\n 2 1",
+    'storage_local_net_ip' => '10.0.0.110',
   },
   {
     'name' => 'fuel-compute-01',
@@ -69,12 +82,8 @@ $nodes_harr = [
     'internal_address' => '10.0.0.107',
     'public_address'   => '10.0.204.107',
   },
-  {
-    'name' => 'fuel-compute-03',
-    'role' => 'compute',
-    'internal_address' => '10.0.0.108',
-    'public_address'   => '10.0.204.108',
-  },]
+]
+
 $nodes = $nodes_harr
 $default_gateway = '10.0.204.1'
 
@@ -103,6 +112,8 @@ $controller_hostnames = keys($controller_internal_addresses)
 #Also, if you do not want Quantum HA, you MUST enable $quantum_network_node
 #on the ONLY controller
 $ha_provider = 'pacemaker'
+$use_unicast_corosync = false
+
 
 # Set nagios master fqdn
 $nagios_master        = 'nagios-server.your-domain-name.com'
@@ -129,6 +140,9 @@ $nova_user_password      = 'nova'
 $rabbit_password         = 'nova'
 $rabbit_user             = 'nova'
 
+$swift_user_password     = 'swift_pass'
+$swift_shared_secret     = 'changeme'
+
 $quantum_user_password   = 'quantum_pass'
 $quantum_db_password     = 'quantum_pass'
 $quantum_db_user         = 'quantum'
@@ -145,9 +159,6 @@ $quantum_db_dbname       = 'quantum'
 # Consult OpenStack documentation for differences between them.
 $quantum                 = true
 $quantum_netnode_on_cnt  = true
-
-#$quantum_host            = $internal_virtual_ip
-
 
 # Specify network creation criteria:
 # Should puppet automatically create networks?
@@ -212,12 +223,6 @@ if $quantum {
   $internal_int = $internal_interface
 }
 
-if $::hostname == 'fuel-controller-01' {
-  $primary_controller = true
-} else {
-  $primary_controller = false
-}
-
 #Network configuration
 stage {'netconfig':
       before  => Stage['main'],
@@ -269,7 +274,7 @@ class node_netconfig (
 # This parameter specifies the the identifier of the current cluster. This is needed in case of multiple environments.
 # installation. Each cluster requires a unique integer value. 
 # Valid identifier range is 1 to 254
-$deployment_id = '89'
+$deployment_id = '79'
 
 # Below you can enable or disable various services based on the chosen deployment topology:
 ### CINDER/VOLUME ###
@@ -278,14 +283,21 @@ $deployment_id = '89'
 # Consult openstack docs for differences between them
 $cinder                  = true
 
-# Should we install cinder on compute nodes?
-$cinder_on_computes      = false
+# Choose which nodes to install cinder onto
+# 'compute'            -> compute nodes will run cinder
+# 'controller'         -> controller nodes will run cinder
+# 'storage'            -> storage nodes will run cinder
+# 'fuel-controller-XX' -> specify particular host(s) by hostname
+# 'XXX.XXX.XXX.XXX'    -> specify particular host(s) by IP address
+# 'all'                -> compute, controller, and storage nodes will run cinder (excluding swif
+
+$cinder_nodes          = 'controller'
 
 #Set it to true if your want cinder-volume been installed to the host
 #Otherwise it will install api and scheduler services
 $manage_volumes          = true
 
-# Setup network address, which Cinder uses to export iSCSI targets.
+# Setup network interface, which Cinder uses to export iSCSI targets.
 $cinder_iscsi_bind_addr = $internal_address
 
 # Below you can add physical volumes to cinder. Please replace values with the actual names of devices.
@@ -301,20 +313,50 @@ $nv_physical_volume     = ['/dev/sdz', '/dev/sdy', '/dev/sdx']
 
 ### CINDER/VOLUME END ###
 
-### GLANCE ###
+### GLANCE and SWIFT ###
 
 # Which backend to use for glance
 # Supported backends are "swift" and "file"
-$glance_backend          = 'file'
+$glance_backend          = 'swift'
 
 # Use loopback device for swift:
 # set 'loopback' or false
 # This parameter controls where swift partitions are located:
 # on physical partitions or inside loopback devices.
-$swift_loopback = false
+$swift_loopback = 'loopback'
+
+# Which IP address to bind swift components to: e.g., which IP swift-proxy should listen on
+$swift_local_net_ip      = $internal_address
+
+# IP node of controller used during swift installation
+# and put into swift configs
+$controller_node_public  = $internal_virtual_ip
+
+
+# Hash of proxies hostname|fqdn => ip mappings.
+# This is used by controller_ha.pp manifests for haproxy setup
+# of swift_proxy backends
+$swift_proxies = $controller_internal_addresses
+
+
+# Set hostname of swift_master.
+# It tells on which swift proxy node to build
+# *ring.gz files. Other swift proxies/storages
+# will rsync them.
+if $node[0]['role'] == 'primary-controller' {
+  $primary_proxy = true
+} else {
+  $primary_proxy = false
+}
+if $node[0]['role'] == 'primary-controller' {
+  $primary_controller = true
+} else {
+  $primary_controller = false
+}
+$master_swift_proxy_nodes = filter_nodes($nodes,'role','primary-controller')
+$master_swift_proxy_ip = $master_swift_proxy_nodes[0]['internal_address']
 
 ### Glance and swift END ###
-
 
 ### Syslog ###
 # Enable error messages reporting to rsyslog. Rsyslog must be installed in this case.
@@ -359,8 +401,6 @@ $mirror_type = 'default'
 $enable_test_repo = false
 $repo_proxy = undef
 
-#$quantum_sql_connection  = "mysql://${quantum_db_user}:${quantum_db_password}@${quantum_host}/${quantum_db_dbname}"
-
 # This parameter specifies the verbosity level of log messages
 # in openstack components config. Currently, it disables or enables debugging.
 $verbose = true
@@ -382,8 +422,6 @@ $cinder_rate_limits = {
   'DELETE' => 1000 
 }
 
-
-Exec { logoutput => true }
 #Specify desired NTP servers here.
 #If you leave it undef pool.ntp.org
 #will be used
@@ -408,6 +446,8 @@ Exec<| title == 'clocksync' |>->Exec<| title == 'nova-manage db sync' |>
 Exec<| title == 'clocksync' |>->Exec<| title == 'initial-db-sync' |>
 Exec<| title == 'clocksync' |>->Exec<| title == 'post-nova_config' |>
 
+
+Exec { logoutput => true }
 
 ### END OF PUBLIC CONFIGURATION PART ###
 # Normally, you do not need to change anything after this string 
@@ -474,6 +514,7 @@ class compact_controller (
     memcached_servers       => $controller_hostnames,
     export_resources        => false,
     glance_backend          => $glance_backend,
+    swift_proxies           => $swift_proxies,
     quantum                 => $quantum,
     quantum_user_password   => $quantum_user_password,
     quantum_db_password     => $quantum_db_password,
@@ -486,6 +527,7 @@ class compact_controller (
     tenant_network_type     => $tenant_network_type,
     segment_range           => $segment_range,
     cinder                  => $cinder,
+    cinder_nodes            => $cinder_nodes,
     cinder_iscsi_bind_addr  => $cinder_iscsi_bind_addr,
     manage_volumes          => $manage_volumes,
     galera_nodes            => $controller_hostnames,
@@ -494,11 +536,18 @@ class compact_controller (
     nova_rate_limits        => $nova_rate_limits,
     cinder_rate_limits      => $cinder_rate_limits,
     horizon_use_ssl         => $horizon_use_ssl,
+    use_unicast_corosync    => $use_unicast_corosync,
     ha_provider             => $ha_provider
+  }
+  class { 'swift::keystone::auth':
+    password         => $swift_user_password,
+    public_address   => $public_virtual_ip,
+    internal_address => $internal_virtual_ip,
+    admin_address    => $internal_virtual_ip,
   }
 }
 
-# Definition of OpenStack controller nodes.
+# Definition of the first OpenStack controller.
 node /fuel-controller-[\d+]/ {
   include stdlib
   class { 'operatingsystem::checksupported':
@@ -512,22 +561,60 @@ node /fuel-controller-[\d+]/ {
       public_netmask => $::public_netmask,
       stage          => 'netconfig',
   }
+
   class {'nagios':
     proj_name       => $proj_name,
     services        => [
       'host-alive','nova-novncproxy','keystone', 'nova-scheduler',
       'nova-consoleauth', 'nova-cert', 'haproxy', 'nova-api', 'glance-api',
-      'glance-registry','horizon', 'rabbitmq', 'mysql'
+      'glance-registry','horizon', 'rabbitmq', 'mysql', 'swift-proxy',
+      'swift-account', 'swift-container', 'swift-object',
     ],
     whitelist       => ['127.0.0.1', $nagios_master],
     hostgroup       => 'controller',
   }
+  
   class { compact_controller: }
-}
+  $swift_zone = $node[0]['swift_zone']
 
+  class { 'openstack::swift::storage_node':
+    storage_type       => $swift_loopback,
+    swift_zone         => $swift_zone,
+    swift_local_net_ip => $internal_address,
+    master_swift_proxy_ip  => $master_swift_proxy_ip,
+    sync_rings             => ! $primary_proxy
+  }
+
+  if $primary_proxy {
+    ring_devices {'all':
+      storages => $controllers
+    }
+  }
+
+  class { 'openstack::swift::proxy':
+    swift_user_password     => $swift_user_password,
+    swift_proxies           => $swift_proxies,
+    primary_proxy           => $primary_proxy,
+    controller_node_address => $internal_virtual_ip,
+    swift_local_net_ip      => $internal_address,
+    master_swift_proxy_ip  => $master_swift_proxy_ip,
+  }
+
+  Class ['openstack::swift::proxy'] -> Class['openstack::swift::storage_node']
+}
 
 # Definition of OpenStack compute nodes.
 node /fuel-compute-[\d+]/ {
+  ## Uncomment lines bellow if You want
+  ## configure network of this nodes 
+  ## by puppet.
+  class {'::node_netconfig':
+      mgmt_ipaddr    => $::internal_address,
+      mgmt_netmask   => $::internal_netmask,
+      public_ipaddr  => $::public_address,
+      public_netmask => $::public_netmask,
+      stage          => 'netconfig',
+  }
   include stdlib
   class { 'operatingsystem::checksupported':
       stage => 'setup'
@@ -570,7 +657,8 @@ node /fuel-compute-[\d+]/ {
     quantum_host           => $internal_virtual_ip,
     tenant_network_type    => $tenant_network_type,
     segment_range          => $segment_range,
-    cinder                 => $cinder_on_computes,
+    cinder                  => $cinder,
+    cinder_nodes            => $cinder_nodes,
     cinder_iscsi_bind_addr => $cinder_iscsi_bind_addr,
     nv_physical_volume     => $nv_physical_volume,
     db_host                => $internal_virtual_ip,

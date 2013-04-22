@@ -114,6 +114,7 @@ $controller_hostnames = keys($controller_internal_addresses)
 $ha_provider = 'pacemaker'
 $use_unicast_corosync = false
 
+
 # Set nagios master fqdn
 $nagios_master        = 'nagios-server.your-domain-name.com'
 ## proj_name  name of environment nagios configuration
@@ -227,7 +228,7 @@ stage {'netconfig':
       before  => Stage['main'],
 }
 
-class {'l23network': stage=> 'netconfig'}
+class {'l23network': use_ovs=>$quantum, stage=> 'netconfig'}
 class node_netconfig (
   $mgmt_ipaddr,
   $mgmt_netmask  = '255.255.255.0',
@@ -282,8 +283,15 @@ $deployment_id = '79'
 # Consult openstack docs for differences between them
 $cinder                  = true
 
-# Should we install cinder on compute nodes?
-$cinder_on_computes      = false
+# Choose which nodes to install cinder onto
+# 'compute'            -> compute nodes will run cinder
+# 'controller'         -> controller nodes will run cinder
+# 'storage'            -> storage nodes will run cinder
+# 'fuel-controller-XX' -> specify particular host(s) by hostname
+# 'XXX.XXX.XXX.XXX'    -> specify particular host(s) by IP address
+# 'all'                -> compute, controller, and storage nodes will run cinder (excluding swif
+
+$cinder_nodes          = 'controller'
 
 #Set it to true if your want cinder-volume been installed to the host
 #Otherwise it will install api and scheduler services
@@ -519,6 +527,7 @@ class compact_controller (
     tenant_network_type     => $tenant_network_type,
     segment_range           => $segment_range,
     cinder                  => $cinder,
+    cinder_nodes            => $cinder_nodes,
     cinder_iscsi_bind_addr  => $cinder_iscsi_bind_addr,
     manage_volumes          => $manage_volumes,
     galera_nodes            => $controller_hostnames,
@@ -538,7 +547,7 @@ class compact_controller (
   }
 }
 
-# Definition of OpenStack controllers.
+# Definition of the first OpenStack controller.
 node /fuel-controller-[\d+]/ {
   include stdlib
   class { 'operatingsystem::checksupported':
@@ -597,15 +606,15 @@ node /fuel-controller-[\d+]/ {
 # Definition of OpenStack compute nodes.
 node /fuel-compute-[\d+]/ {
   ## Uncomment lines bellow if You want
-  ## configure network of this nodes
+  ## configure network of this nodes 
   ## by puppet.
-#  class {'::node_netconfig':
-#      mgmt_ipaddr    => $::internal_address,
-#      mgmt_netmask   => $::internal_netmask,
-#      public_ipaddr  => $::public_address,
-#      public_netmask => $::public_netmask,
-#      stage          => 'netconfig',
-#  }
+  class {'::node_netconfig':
+      mgmt_ipaddr    => $::internal_address,
+      mgmt_netmask   => $::internal_netmask,
+      public_ipaddr  => $::public_address,
+      public_netmask => $::public_netmask,
+      stage          => 'netconfig',
+  }
   include stdlib
   class { 'operatingsystem::checksupported':
       stage => 'setup'
@@ -648,7 +657,8 @@ node /fuel-compute-[\d+]/ {
     quantum_host           => $internal_virtual_ip,
     tenant_network_type    => $tenant_network_type,
     segment_range          => $segment_range,
-    cinder                 => $cinder_on_computes,
+    cinder                  => $cinder,
+    cinder_nodes            => $cinder_nodes,
     cinder_iscsi_bind_addr => $cinder_iscsi_bind_addr,
     nv_physical_volume     => $nv_physical_volume,
     db_host                => $internal_virtual_ip,
