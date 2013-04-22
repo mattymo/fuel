@@ -117,7 +117,9 @@ class openstack::swift::storage_node (
     }
 
   } 
+  }
 
  
   
 }
+
