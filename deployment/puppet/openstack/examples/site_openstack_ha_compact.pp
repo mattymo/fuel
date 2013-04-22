@@ -289,9 +289,9 @@ $cinder                  = true
 # 'storage'            -> storage nodes will run cinder
 # 'fuel-controller-XX' -> specify particular host(s) by hostname
 # 'XXX.XXX.XXX.XXX'    -> specify particular host(s) by IP address
-# 'all'                -> compute, controller, and storage nodes will run cinder (excluding swif
+# 'all'                -> compute, controller, and storage nodes will run cinder (excluding swift and proxy nodes)
 
-$cinder_nodes          = 'controller'
+$cinder_nodes          = ['controller']
 
 #Set it to true if your want cinder-volume been installed to the host
 #Otherwise it will install api and scheduler services

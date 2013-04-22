@@ -242,25 +242,16 @@ $deployment_id = '69'
 # Consult openstack docs for differences between them
 $cinder                  = true
 
-# Should we install cinder on compute nodes?
-#$cinder_on_computes      = false
-
 # Choose which nodes to install cinder onto
-# 'compute_only'    -> compute nodes will run cinder
-# 'controller_only' -> controller nodes will run cinder
-# 'storage_only'    -> storage nodes will run cinder
-# 'all'             -> compute, controller, and storage nodes will run cinder (excluding swif
-# 'list'           -> specify list of nodes to run cinder
-$cinder_nodes          = 'controller_only'
+# 'compute'            -> compute nodes will run cinder
+# 'controller'         -> controller nodes will run cinder
+# 'storage'            -> storage nodes will run cinder
+# 'fuel-controller-XX' -> specify particular host(s) by hostname
+# 'XXX.XXX.XXX.XXX'    -> specify particular host(s) by IP address
+# 'all'                -> compute, controller, and storage nodes will run cinder (excluding swift and proxy nodes)
 
-if $cinder_nodes == 'list' {
-  #Specify a list of nodes for running cinder
-  #May be specified by role, hostname, or internal_address
-  $cinder_node_list    = [ 'fuel-controller-03', 'storage', '10.0.0.105' ]
-} else {
-  #Do not change
-  $cinder_node_list    = false
-}
+$cinder_nodes          = ['controller']
+
 #Set it to true if your want cinder-volume been installed to the host
 #Otherwise it will install api and scheduler services
 $manage_volumes          = true
