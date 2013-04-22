@@ -78,25 +78,24 @@ class openstack::swift::storage_node (
   #Evaluate cinder node selection
   if ($cinder) {
     if ($cinder_nodes == 'storage') or ($cinder_nodes == 'all') or (member($cinder_nodes,'all')) {
-      $cinder = true
+      $cinder_swift = true
     } elsif (is_array($cinder_nodes)) {
       if (member($cinder_nodes,'storage')) {
-        $cinder = true
+        $cinder_swift = true
       } elsif (member($cinder_nodes,$::hostname)) {
-        $cinder = true
+        $cinder_swift = true
       } elsif (member($cinder_nodes,$internal_address)) {
-        $cinder = true
+        $cinder_swift = true
       } else {
-        $cinder = false
+        $cinder_swift = false
       }
     } else {
-      $cinder = false
+      $cinder_swift = false
     }
   }
 
   $enabled_apis = 'ec2,osapi_compute'
-  if ($cinder) and !defined(Class['swift']) {
-  if ($cinder) {
+  if ($cinder_swift) and !defined(Class['swift']) {
     package {'python-cinderclient': ensure => present}
     class {'openstack::cinder':
       sql_connection       => "mysql://${cinder_db_user}:${cinder_db_password}@${db_host}/${cinder_db_dbname}?charset=utf8",
@@ -117,9 +116,5 @@ class openstack::swift::storage_node (
     }
 
   } 
-  }
-
- 
-  
 }
 

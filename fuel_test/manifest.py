@@ -197,7 +197,7 @@ class Manifest(object):
     def write_openstack_simple_manifest(self, remote, ci, controllers,
                                         use_syslog=True,
                                         quantum=True,
-                                        cinder=True, cinder_nodes='all'):
+                                        cinder=True, cinder_nodes=['all']):
         template = Template(
             root(
                 'deployment', 'puppet', 'openstack', 'examples',
@@ -258,7 +258,7 @@ class Manifest(object):
     def write_openstack_ha_minimal_manifest(self, remote, template, ci, controllers, quantums,
                                  proxies=None, use_syslog=True,
                                  quantum=True, loopback=True,
-                                 cinder=True, cinder_nodes='all', quantum_netnode_on_cnt=True,
+                                 cinder=True, cinder_nodes=['all'], quantum_netnode_on_cnt=True,
                                  ha_provider='pacemaker'):
         template.replace(
             internal_virtual_ip=ci.internal_virtual_ip(),
@@ -297,7 +297,7 @@ class Manifest(object):
     def write_openstack_manifest(self, remote, template, ci, controllers, quantums,
                                  proxies=None, use_syslog=True,
                                  quantum=True, loopback=True,
-                                 cinder=True, cinder_nodes='all',
+                                 cinder=True, cinder_nodes=['all'],
                                  swift=True, quantum_netnode_on_cnt=True,
                                  ha_provider='pacemaker'):
         template.replace(
