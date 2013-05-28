@@ -127,8 +127,7 @@ $(BUILD_DIR)/iso/isoroot-files.done: \
 		$(ISOROOT)/functions.sh \
 		$(ISOROOT)/bootstrap_admin_node.conf \
 		$(ISOROOT)/version.yaml \
-		$(ISOROOT)/fuel-modules.tgz \
-		$(ISOROOT)/astute-0.0.1.gem
+		$(ISOROOT)/fuel-modules.tgz
 	$(ACTION.TOUCH)
 
 $(ISOROOT)/fuel-modules.tgz: \
