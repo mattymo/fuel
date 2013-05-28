@@ -78,7 +78,7 @@ postgresql-libs
 postgresql-server
 pssh
 puppet-2.7.19
-puppet-server-2.7.19-1
+puppet-server-2.7.19
 puppetdb
 puppetdb-terminus
 python-amqp
@@ -98,6 +98,7 @@ qemu-img
 qemu-kvm
 rabbitmq-server
 rpm-build
+rubygem-astute
 rsyslog
 rsyslog-relp
 rsyslog-gssapi
