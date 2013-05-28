@@ -127,7 +127,8 @@ $(BUILD_DIR)/iso/isoroot-files.done: \
 		$(ISOROOT)/functions.sh \
 		$(ISOROOT)/bootstrap_admin_node.conf \
 		$(ISOROOT)/version.yaml \
-		$(ISOROOT)/fuel-modules.tgz
+		$(ISOROOT)/fuel-modules.tgz \
+                $(ISOROOT)/rebuild
 	$(ACTION.TOUCH)
 
 $(ISOROOT)/fuel-modules.tgz: \
