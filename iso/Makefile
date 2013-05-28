@@ -3,7 +3,7 @@ TOP_DIR?=$(PWD)
 TOP_DIR:=$(abspath $(TOP_DIR))
 
 COMMIT_SHA:=$(shell git rev-parse --verify HEAD)
-FUEL_VERSION:=2.1-folsom
+FUEL_VERSION?=2.1-folsom
 
 CENTOS_MAJOR:=6
 CENTOS_MINOR:=4
