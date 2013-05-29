@@ -83,21 +83,21 @@ $(BUILD_DIR)/iso/isoroot-os.done: \
 endif
 
 $(BUILD_DIR)/iso/isoroot-pungi.done: $(BUILD_DIR)/iso/kickstart.done
-	[ -d $(BUILD_DIR)/iso/`date +%Y%m%d`/x86_64/os-disc1 ] && sudo rm -rf $(BUILD_DIR)/iso/`date +%Y%m%d`/x86_64/os-disc1 || :
-	if [ -f $(BUILD_DIR)/iso/`date +%Y%m%d`/x86_64/os/images/install.img ];then \
+	[ -d $(BUILD_DIR)/iso/$(CENTOS_RELEASE)/x86_64/os-disc1 ] && sudo rm -rf $(BUILD_DIR)/iso/$(CENTOS_RELEASE)/x86_64/os-disc1 || :
+	if [ -f $(BUILD_DIR)/iso/$(CENTOS_RELEASE)/x86_64/os/images/install.img ];then \
 	  echo "Reusing existing iso data (and saving time)...";\
-	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=fuel-$(FUEL_VERSION) --nosource --nodebuginfo -G -C -I --destdir $(BUILD_DIR)/iso/ --cachedir $(LOCAL_MIRROR) --force; \
+	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=fuel-$(FUEL_VERSION) --ver=$(CENTOS_RELEASE) --nosource --nodebuginfo -G -C -I --destdir $(BUILD_DIR)/iso/ --cachedir $(LOCAL_MIRROR) --force; \
 	else \
 	  echo "No existing iso data. Building from scratch (~15 minutes)..."; \
-	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=fuel-$(FUEL_VERSION) --nosource --nodebuginfo -G -C -I -B --destdir $(BUILD_DIR)/iso/ --cachedir $(LOCAL_MIRROR) --force; \
+	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=fuel-$(FUEL_VERSION) --ver=$(CENTOS_RELEASE) --nosource --nodebuginfo -G -C -I -B --destdir $(BUILD_DIR)/iso/ --cachedir $(LOCAL_MIRROR) --force; \
 	fi
 	mkdir -p mountiso $(ISOROOT)
-	sudo mount -o loop,ro $(BUILD_DIR)/iso/`date +%Y%m%d`/x86_64/iso/fuel-*-x86_64-DVD.iso mountiso
+	sudo mount -o loop,ro $(BUILD_DIR)/iso/$(CENTOS_RELEASE)/x86_64/iso/fuel-*-x86_64-DVD.iso mountiso
 	rsync -a --delete --exclude=isolinux/isolinux.cfg mountiso/. $(ISOROOT)/.
 	chmod -R u+rw $(ISOROOT)
 	sudo umount mountiso
 	rm -rf mountiso
-	sudo rm -rf $(BUILD_DIR)/iso/`date +%Y%m%d`/x86_64/iso/fuel-*-x86_64-DVD.iso
+	sudo rm -rf $(BUILD_DIR)/iso/$(CENTOS_RELEASE)/x86_64/iso/fuel-*-x86_64-DVD.iso
 	$(ACTION.TOUCH)
 
 $(BUILD_DIR)/iso/kickstart.done: $(BUILD_DIR)/iso/ksrepos.cfg $(BUILDKS)
@@ -133,7 +133,11 @@ $(BUILD_DIR)/iso/isoroot-files.done: \
 
 $(ISOROOT)/fuel-modules.tgz: \
 		$(call find-files,$(FUEL_DIR))
-	(cd $(FUEL_DIR) && tar chzf $@ *)
+	if [ -z "$$branch" ]; then \
+	  (cd $(FUEL_DIR) && tar chzf $@ *); \
+	else \
+	  git archive --format=tar remotes/origin/$(branch):deployment/puppet | gzip > $@; \
+	fi
 
 $(ISOROOT)/astute-0.0.1.gem:
 	mkdir -p $(@D)
