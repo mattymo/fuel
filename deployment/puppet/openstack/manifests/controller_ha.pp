@@ -1,12 +1,9 @@
+#stage {'clocksync': before => Stage['main']}
 
-define haproxy_service(
-  $order,
-  $balancers,
-  $virtual_ips,
-  $port,
-  $define_cookies = false,
-  $define_backend = false
-) {
+
+
+define haproxy_service($order, $balancers, $virtual_ips, $port, $define_cookies = false, $define_backend = false) {
+
   case $name {
     "mysqld": {
       $haproxy_config_options = { 'option' => ['mysql-check user cluster_watcher', 'tcplog','clitcpka','srvtcpka'], 'balance' => 'roundrobin', 'mode' => 'tcp', 'timeout server' => '28801s', 'timeout client' => '28801s' }
@@ -57,33 +54,33 @@ define haproxy_service(
       $balancer_port = $port
     }
   }
-  
-  add_haproxy_service { $name : 
-    order                    => $order, 
-    balancers                => $balancers, 
-    virtual_ips              => $virtual_ips, 
-    port                     => $port, 
-    haproxy_config_options   => $haproxy_config_options, 
-    balancer_port            => $balancer_port, 
-    balancermember_options   => $balancermember_options, 
-    define_cookies           => $define_cookies, 
+
+  add_haproxy_service { $name :
+    order                    => $order,
+    balancers                => $balancers,
+    virtual_ips              => $virtual_ips,
+    port                     => $port,
+    haproxy_config_options   => $haproxy_config_options,
+    balancer_port            => $balancer_port,
+    balancermember_options   => $balancermember_options,
+    define_cookies           => $define_cookies,
     define_backend           => $define_backend,
   }
 }
 
-# add_haproxy_service moved to separate define to allow adding custom sections 
+# add_haproxy_service moved to separate define to allow adding custom sections
 # to haproxy config without any default config options, except only required ones.
 define add_haproxy_service (
-    $order, 
-    $balancers, 
-    $virtual_ips, 
-    $port, 
-    $haproxy_config_options, 
-    $balancer_port, 
+    $order,
+    $balancers,
+    $virtual_ips,
+    $port,
+    $haproxy_config_options,
+    $balancer_port,
     $balancermember_options,
     $mode = 'tcp',
-    $define_cookies = false, 
-    $define_backend = false, 
+    $define_cookies = false,
+    $define_backend = false,
     $collect_exported = false
     ) {
     haproxy::listen { $name:
@@ -105,6 +102,16 @@ define add_haproxy_service (
     }
 }
 
+define keepalived_dhcp_hook($interface)
+{
+    $down_hook="ip addr show dev $interface | grep -w $interface:ka | awk '{print \$2}' > /tmp/keepalived_${interface}_ip\n"
+    $up_hook="cat /tmp/keepalived_${interface}_ip |  while read ip; do  ip addr add \$ip dev $interface label $interface:ka; done\n"
+    file {"/etc/dhcp/dhclient-${interface}-down-hooks": content=>$down_hook, mode => 744 }
+    file {"/etc/dhcp/dhclient-${interface}-up-hooks": content=>$up_hook, mode => 744 }
+}
+
+
+
 class openstack::controller_ha (
    $primary_controller,
    $controller_public_addresses, $public_interface, $private_interface, $controller_internal_addresses,
@@ -112,11 +119,11 @@ class openstack::controller_ha (
    $floating_range, $fixed_range, $multi_host, $network_manager, $verbose, $network_config = {}, $num_networks = 1, $network_size = 255,
    $auto_assign_floating_ip, $mysql_root_password, $admin_email, $admin_user = 'admin', $admin_password, $keystone_admin_tenant='admin',
    $keystone_db_password, $keystone_admin_token, $glance_db_password, $glance_user_password,
-   $nova_db_password, $nova_user_password, $rabbit_password, $rabbit_user,
-   $rabbit_nodes, $memcached_servers, $export_resources, $glance_backend='file', $swift_proxies=undef,
+   $nova_db_password, $nova_user_password, $queue_provider, $rabbit_password, $rabbit_user, $rabbit_nodes,
+   $qpid_password, $qpid_user, $qpid_nodes, $memcached_servers, $export_resources, $glance_backend='file', $swift_proxies=undef,
    $quantum = false, $quantum_user_password='', $quantum_db_password='', $quantum_db_user = 'quantum',
    $quantum_db_dbname  = 'quantum', $cinder = false, $cinder_iscsi_bind_addr = false, $tenant_network_type = 'gre', $segment_range = '1:4094',
-   $nv_physical_volume = undef, $manage_volumes = false,$galera_nodes, $use_syslog = false,
+   $nv_physical_volume = undef, $manage_volumes = false, $custom_mysql_setup_class = 'galera', $galera_nodes, $use_syslog = false,
    $cinder_rate_limits = undef, $nova_rate_limits = undef,
    $cinder_volume_group     = 'cinder-volumes',
    $cinder_user_password    = 'cinder_user_pass',
@@ -185,6 +192,16 @@ class openstack::controller_ha (
       balancers => $controller_internal_addresses
     }
 
+    file { '/etc/rsyslog.d/haproxy.conf':
+      ensure => present,
+      content => 'local0.* -/var/log/haproxy.log'
+    }
+
+    if $queue_provider == 'rabbitmq' {
+      #Class['keepalived'] -> Class ['nova::rabbitmq']
+      Cs_resource['internal-vip'] -> Class ['nova::rabbitmq']
+    }
+
     haproxy_service { 'horizon':    order => 15, port => 80, virtual_ips => [$public_virtual_ip], define_cookies => true  }
 
     if $horizon_use_ssl {
@@ -208,9 +225,15 @@ class openstack::controller_ha (
     }
 
     haproxy_service { 'glance-reg': order => 90, port => 9191, virtual_ips => [$internal_virtual_ip]  }
-   #haproxy_service { 'rabbitmq-epmd':    order => 91, port => 4369, virtual_ips => [$internal_virtual_ip], define_backend => true }
-    haproxy_service { 'rabbitmq-openstack':    order => 92, port => 5672, virtual_ips => [$internal_virtual_ip], define_backend => true }
-    haproxy_service { 'mysqld': order => 95, port => 3306, virtual_ips => [$internal_virtual_ip], define_backend => true }
+#    haproxy_service { 'rabbitmq-epmd':    order => 91, port => 4369, virtual_ips => [$internal_virtual_ip], define_backend => true }
+
+    if $queue_provider == 'rabbitmq'{
+      haproxy_service { 'rabbitmq-openstack':    order => 92, port => 5672, virtual_ips => [$internal_virtual_ip], define_backend => true }
+    }
+
+    if $custom_mysql_setup_class == 'galera' {
+      haproxy_service { 'mysqld': order => 95, port => 3306, virtual_ips => [$internal_virtual_ip], define_backend => true }
+    }
     if $glance_backend == 'swift' {
       haproxy_service { 'swift': order => 96, port => 8080, virtual_ips => [$public_virtual_ip,$internal_virtual_ip], balancers => $swift_proxies }
     }
@@ -222,29 +245,132 @@ class openstack::controller_ha (
     anchor {'haproxy_done': }
 
 
-    ###
-    # Setup Galera's 
-
-    package { 'socat': ensure => present }
-    exec { 'wait-for-haproxy-mysql-backend':
-      command   => "echo show stat | socat unix-connect:///var/lib/haproxy/stats stdio | grep -q '^mysqld,BACKEND,.*,UP,'",
-      path      => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
-      try_sleep => 5,
-      tries     => 60,
+    exec { 'up-public-interface':
+      command => "ifconfig ${public_interface} up",
+      path    => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
     }
-    Package['socat'] -> Exec['wait-for-haproxy-mysql-backend']
+    exec { 'up-internal-interface':
+      command => "ifconfig ${internal_interface} up",
+      path    => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
+    }
+    exec { 'up-private-interface':
+      command => "ifconfig ${private_interface} up",
+      path    => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
+    }
 
-    Exec<| title == 'wait-for-synced-state' |> -> Exec['wait-for-haproxy-mysql-backend']
-    Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'initial-db-sync' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'keystone-manage db_sync' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'glance-manage db_sync' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'cinder-manage db_sync' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'nova-db-sync' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Service <| title == 'cinder-scheduler' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Service <| title == 'cinder-volume' |>
-    Exec['wait-for-haproxy-mysql-backend'] -> Service <| title == 'cinder-api' |>
-    Anchor['haproxy_done'] -> Exec['wait-for-haproxy-mysql-backend']
-    Anchor['haproxy_done'] -> Class['galera']
+#    if $primary_controller {
+#      exec { 'create-public-virtual-ip':
+#        command => "ip addr add ${public_virtual_ip} dev ${public_interface} label ${public_interface}:ka",
+#        unless  => "ip addr show dev ${public_interface} | grep -w ${public_virtual_ip}",
+#        path    => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
+#        before  => Service['keepalived'],
+#        require => Exec['up-public-interface'],
+#      }
+#       
+#    }
+#
+#    keepalived_dhcp_hook {$public_interface:interface=>$public_interface}
+#    if $internal_interface != $public_interface {
+#      keepalived_dhcp_hook {$internal_interface:interface=>$internal_interface}
+#    }
+#
+#    Keepalived_dhcp_hook<| |> {before =>Service['keepalived']}
+#
+#    if $primary_controller {
+#      exec { 'create-internal-virtual-ip':
+#        command => "ip addr add ${internal_virtual_ip} dev ${internal_interface} label ${internal_interface}:ka",
+#        unless  => "ip addr show dev ${internal_interface} | grep -w ${internal_virtual_ip}",
+#        path    => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
+#        before  => Service['keepalived'],
+#        require => Exec['up-internal-interface'],
+#      }
+#    }
+    cs_shadow { 'internal-vip': cib => 'internal-vip' }
+
+    cs_resource { 'internal-vip':
+      primitive_class => 'ocf',
+      primitive_type  => 'IPaddr2',
+      provided_by     => 'heartbeat',
+      parameters      => { 'ip' => $internal_virtual_ip, 'cidr_netmask' => '24',
+                           'nic' => $internal_interface },
+      operations      => { 'monitor' => { 'interval' => '15s' } },
+    }
+    
+    cs_commit { 'internal-vip': cib => "internal-vip" }
+
+    cs_shadow { 'public-vip': cib => 'public-vip' }
+
+    cs_resource { 'public-vip':
+      primitive_class => 'ocf',
+      primitive_type  => 'IPaddr2',
+      provided_by     => 'heartbeat',
+      parameters      => { 'ip' => $public_virtual_ip, 'cidr_netmask' => '24',
+                           'nic' => $public_interface },
+      operations      => { 'monitor' => { 'interval' => '15s' } },
+    }
+    
+    cs_commit { 'public-vip': cib => "public-vip" }
+
+    #Order dependencies
+    Cs_resource['internal-vip'] -> Cs_resource['public-vip'] -> Class['openstack::controller']
+    sysctl::value { 'net.ipv4.ip_nonlocal_bind': value => '1' }
+
+    class { 'haproxy':
+      enable => true,
+      global_options   => merge($::haproxy::params::global_options, {'log' => "/dev/log local0"}),
+      defaults_options => merge($::haproxy::params::defaults_options, {'mode' => 'http'}),
+      require => Sysctl::Value['net.ipv4.ip_nonlocal_bind'],
+    }
+
+#    exec { 'create-keepalived-rules':
+#        command => "iptables -I INPUT -m pkttype --pkt-type multicast -d 224.0.0.18 -j ACCEPT && /etc/init.d/iptables save ",
+#        unless => "iptables-save  | grep '\-A INPUT -d 224.0.0.18/32 -m pkttype --pkt-type multicast -j ACCEPT' -q",
+#        path => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
+#        before => Service['keepalived'],
+#        require => Class['::openstack::firewall']
+#    }
+#
+#    # keepalived
+#    $public_vrid   = $::deployment_id
+#    $internal_vrid = $::deployment_id + 1
+#
+#    class { 'keepalived':
+#      require => Class['haproxy'] ,
+#    }
+#
+#    keepalived::instance { $public_vrid:
+#      interface => $public_interface,
+#      virtual_ips => [$public_virtual_ip],
+#      state    => $primary_controller ? { true => 'MASTER', default => 'BACKUP' },
+#      priority => $primary_controller ? { true => 101,      default => 100      },
+#    }
+#    keepalived::instance { $internal_vrid:
+#      interface => $internal_interface,
+#      virtual_ips => [$internal_virtual_ip],
+#      state    => $primary_controller ? { true => 'MASTER', default => 'BACKUP' },
+#      priority => $primary_controller ? { true => 101,      default => 100      },
+#    }
+   if ( $custom_mysql_setup_class == 'galera' ) {
+     Class['haproxy'] -> Class['galera']
+     package { 'socat': ensure => present }
+     exec { 'wait-for-haproxy-mysql-backend':
+       command   => "echo show stat | socat unix-connect:///var/lib/haproxy/stats stdio | grep -q '^mysqld,BACKEND,.*,UP,'",
+       path      => ['/usr/bin', '/usr/sbin', '/sbin', '/bin'],
+       require   => [Service['haproxy'], Package['socat']],
+       try_sleep => 5,
+       tries     => 60,
+     }
+ 
+     Exec<| title == 'wait-for-synced-state' |> -> Exec['wait-for-haproxy-mysql-backend']
+     Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'initial-db-sync' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'keystone-manage db_sync' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'glance-manage db_sync' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'cinder-manage db_sync' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Exec<| title == 'nova-db-sync' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Service <| title == 'cinder-scheduler' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Service <| title == 'cinder-volume' |>
+     Exec['wait-for-haproxy-mysql-backend'] -> Service <| title == 'cinder-api' |>
+   }
 
     class { '::openstack::controller':
       public_address          => $public_virtual_ip,
@@ -262,7 +388,7 @@ class openstack::controller_ha (
       verbose                 => $verbose,
       auto_assign_floating_ip => $auto_assign_floating_ip,
       mysql_root_password     => $mysql_root_password,
-      custom_mysql_setup_class=> 'galera',
+      custom_mysql_setup_class=> $custom_mysql_setup_class,
       galera_cluster_name     => 'openstack',
       primary_controller      => $primary_controller,
       galera_node_address     => $internal_address,
@@ -279,6 +405,7 @@ class openstack::controller_ha (
       glance_api_servers      => $glance_api_servers,
       nova_db_password        => $nova_db_password,
       nova_user_password      => $nova_user_password,
+      queue_provider          => $queue_provider,
       rabbit_password         => $rabbit_password,
       rabbit_user             => $rabbit_user,
       rabbit_cluster          => true,
@@ -286,6 +413,12 @@ class openstack::controller_ha (
       rabbit_port             => '5673',
       rabbit_node_ip_address  => $rabbit_node_ip_address,
       rabbit_ha_virtual_ip    => $internal_virtual_ip,
+      qpid_password           => $rabbit_hash[password],
+      qpid_user               => $rabbit_user,
+      qpid_cluster            => false,
+      qpid_nodes              => $controller_hostnames,
+      qpid_port               => '5672',
+      qpid_node_ip_address    => $rabbit_node_ip_address,
       cache_server_ip         => $memcached_servers,
       export_resources        => false,
       api_bind_address        => $internal_address,
@@ -329,10 +462,14 @@ class openstack::controller_ha (
         fixed_range           => $fixed_range,
         create_networks       => $create_networks,
         verbose               => $verbose,
+        queue_provider        => $queue_provider,
         rabbit_password       => $rabbit_password,
         rabbit_user           => $rabbit_user,
         rabbit_nodes          => $rabbit_nodes,
         rabbit_ha_virtual_ip  => $internal_virtual_ip,
+        qpid_password         => $rabbit_hash[password],
+        qpid_user             => $rabbit_user,
+        qpid_nodes            => $controller_hostnames,
         quantum               => $quantum,
         quantum_user_password => $quantum_user_password,
         quantum_db_password   => $quantum_db_password,
@@ -356,6 +493,21 @@ class openstack::controller_ha (
       admin_tenant            => $keystone_admin_tenant,
       keystone_admin_token    => $keystone_admin_token,
       controller_node         => $internal_virtual_ip,
+    }
+    if $ha_provider == 'pacemaker' {
+      if $use_unicast_corosync {
+        $unicast_addresses = $controller_internal_addresses
+      } else {
+        $unicast_addresses = undef
+      }
+    }
+    class {'openstack::corosync':
+      bind_address => $internal_address,
+      unicast_addresses => $unicast_addresses,
+
+    }
+    if $queue_provider == 'qpid' {
+      Class['openstack::corosync'] -> Class['qpid::server']
     }
 }
 

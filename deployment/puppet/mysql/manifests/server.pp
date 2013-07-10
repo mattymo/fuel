@@ -27,14 +27,18 @@ class mysql::server (
   $galera_node_address = undef,
   $galera_nodes = undef,
   $mysql_skip_name_resolve = false,
+  $server_id         = $mysql::params::server_id,
+  $rep_user = 'replicator',
+  $rep_pass = 'replicant666',
 ) inherits mysql::params {
-    
+
+  Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}    
   if ($custom_setup_class == undef) {
     include mysql
     Class['mysql::server'] -> Class['mysql::config']
     Class['mysql']         -> Class['mysql::server']
 
-    create_resources( 'class', { 'mysql::config' => $config_hash } )
+    create_resources( 'class', { 'mysql::config' => $config_hash })
 #    exec { "debug-mysql-server-installation" :
 #      command     => "/usr/bin/yum -d 10 -e 10 -y install MySQL-server-5.5.28-6 2>&1 | tee mysql_install.log",
 #      before => Package["mysql-server"],
@@ -61,12 +65,40 @@ class mysql::server (
       provider => $service_provider,
     }
   }
+  elsif ($custom_setup_class == 'pacemaker_mysql')  {
+    include mysql
+    Package[mysql-server] -> Class['mysql::config']
+    Package[mysql-client] -> Package['mysql-server']
+    Class['mysql::config'] -> Class['mysql::replicator']
+    $config_hash['custom_setup_class'] = $custom_setup_class
+    $allowed_hosts = '%'
+    create_resources( 'class', { 'mysql::config' => $config_hash })
+
+
+    if !defined(Package[mysql-client]) {
+      package { 'mysql-client':
+        name   => $package_name,
+      }
+    }
+
+    package { 'mysql-server':
+      name   => $package_name,
+    }
+    class { 'mysql::replicator':
+      node_addresses => $galera_nodes,
+      node_address   => $galera_node_address,
+      service_name   => $service_name,
+      rep_user       => $rep_pass,
+      rep_pass       => $rep_pass,
+    }
+
+  }
   elsif ($custom_setup_class == 'galera')  {
     Class['galera'] -> Class['mysql::server']
     class { 'galera':
-	    cluster_name => $galera_cluster_name,
-	    primary_controller => $primary_controller,
-	    node_address => $galera_node_address,
+      cluster_name => $galera_cluster_name,
+      primary_controller => $primary_controller,
+      node_address => $galera_node_address,
       node_addresses => $galera_nodes,
         skip_name_resolve => $mysql_skip_name_resolve,
     }
@@ -77,3 +109,4 @@ class mysql::server (
     require($custom_setup_class)
   }
 }
+
