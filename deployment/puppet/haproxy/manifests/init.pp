@@ -85,7 +85,12 @@ class haproxy (
         true  => Service['haproxy'],
         false => undef,
       },
-    }
+    } 
+    
+    file { '/etc/rsyslog.d/haproxy.conf':
+        ensure => present,
+        content => 'local0.* -/var/log/haproxy.log'
+    } 
 
     # Simple Header
     concat::fragment { '00-header':
