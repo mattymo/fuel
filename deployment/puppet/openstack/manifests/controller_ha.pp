@@ -173,18 +173,18 @@ class openstack::controller_ha (
     Concat['/etc/haproxy/haproxy.cfg'] ~> Exec['restart_haproxy']
 
     # Simple Header
-    concat::fragment { '00-header':
-      target  => '/etc/haproxy/haproxy.cfg',
-      order   => '01',
-      content => "# This file managed by Puppet\n",
-    } -> Haproxy_service<| |>
+#    concat::fragment { '00-header':
+#      target  => '/etc/haproxy/haproxy.cfg',
+#      order   => '01',
+#      content => "# This file managed by Puppet\n",
+#    } -> Haproxy_service<| |>
 
     # Template uses $global_options, $defaults_options
-    concat::fragment { 'haproxy-base':
-      target  => '/etc/haproxy/haproxy.cfg',
-      order   => '10',
-      content => template('haproxy/haproxy-base.cfg.erb'),
-    } -> Haproxy_service<| |>
+#    concat::fragment { 'haproxy-base':
+#      target  => '/etc/haproxy/haproxy.cfg',
+#      order   => '10',
+#      content => template('haproxy/haproxy-base.cfg.erb'),
+#    } -> Haproxy_service<| |>
 
 
     Haproxy_service {
