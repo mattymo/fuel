@@ -384,22 +384,22 @@ class openstack::controller (
       use_syslog           => $use_syslog,
       cinder_rate_limits   => $cinder_rate_limits,
       rabbit_ha_virtual_ip => $rabbit_ha_virtual_ip,
-           }
-                                            } 
+        }
+      } 
+    }
   else { 
     if $manage_volumes {
       # Set up nova-volume
       class { 'nova::volume':
         ensure_package => $::openstack_version['nova'],
         enabled        => true,
-            }
+      }
       class { 'nova::volume::iscsi':
         iscsi_ip_address => $api_bind_address,
         physical_volume  => $nv_physical_volume,
-            }
-                      }
-         }
-}
+      }
+    }
+  }
 # Set up nova-volume
 
   if !defined(Class['memcached']){
