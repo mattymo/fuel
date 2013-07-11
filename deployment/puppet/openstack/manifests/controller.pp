@@ -399,19 +399,6 @@ class openstack::controller (
             }
                       }
          }
-  else {
-  if $manage_volumes {
-
-    class { 'nova::volume':
-      ensure_package => $::openstack_version['nova'],
-      enabled        => true,
-          }
-    class { 'nova::volume::iscsi':
-      iscsi_ip_address => $api_bind_address,
-      physical_volume  => $nv_physical_volume,
-          }
-                     }
-      }
 }
 # Set up nova-volume
 
