@@ -192,10 +192,10 @@ class openstack::controller_ha (
       balancers => $controller_internal_addresses
     }
 
-    file { '/etc/rsyslog.d/haproxy.conf':
-      ensure => present,
-      content => 'local0.* -/var/log/haproxy.log'
-    }
+#    file { '/etc/rsyslog.d/haproxy.conf':
+#      ensure => present,
+#      content => 'local0.* -/var/log/haproxy.log'
+#    }
 
     if $queue_provider == 'rabbitmq' {
       #Class['keepalived'] -> Class ['nova::rabbitmq']
