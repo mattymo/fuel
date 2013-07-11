@@ -146,18 +146,17 @@ class openstack::controller_ha (
     $global_options   = $haproxy::params::global_options
     $defaults_options = $haproxy::params::defaults_options
 
-    Class['cluster::haproxy'] -> Anchor['haproxy_done']
-
-    file { '/etc/rsyslog.d/haproxy.conf':
-        ensure => present,
-        content => 'local0.* -/var/log/haproxy.log'
-    } -> Anchor['haproxy_done']
-
-    concat { '/etc/haproxy/haproxy.cfg':
-      owner   => '0',
-      group   => '0',
-      mode    => '0644',
-    } -> Anchor['haproxy_done']
+#    Class['cluster::haproxy'] -> Anchor['haproxy_done']
+#    file { '/etc/rsyslog.d/haproxy.conf':
+#        ensure => present,
+#        content => 'local0.* -/var/log/haproxy.log'
+#    } -> Anchor['haproxy_done']
+#
+#    concat { '/etc/haproxy/haproxy.cfg':
+#      owner   => '0',
+#      group   => '0',
+#      mode    => '0644',
+#    } -> Anchor['haproxy_done']
     
 
     # Dirty hack, due Puppet can't send notify between stages
