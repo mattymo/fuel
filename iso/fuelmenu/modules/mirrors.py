@@ -6,7 +6,9 @@ import urwid.web_display
 import logging
 import sys
 import copy
-#from fuelmenu import settings
+sys.path.append("/home/mmosesohn/git/fuel/iso/fuelmenu")
+from fuelmenu import settings
+from urwidwrapper import *
 log = logging.getLogger('fuelmenu.mirrors')
 log.info("test")
 blank = urwid.Divider()
@@ -27,7 +29,7 @@ class mirrors(urwid.WidgetWrap):
     self.settings = copy.deepcopy(DEFAULTS)
 
   def apply(self, args):
-    if not check:
+    if not self.check(args):
         log.error("Check failed. Not applying")
         return False
     conf = settings()
@@ -39,7 +41,7 @@ class mirrors(urwid.WidgetWrap):
     customurl = self.edit1.get_edit_text()
     self.parent.footer.set_text("Checking %s" % customurl)
     log.info("Checking %s" % customurl)
-    if self.repochoice == "Default":
+    if self.repochoice == "Defult":
       self.parent.footer.set_text("")
       pass
     else:
@@ -57,12 +59,13 @@ class mirrors(urwid.WidgetWrap):
          error_msg = u"Couldn't connect to host."
       elif reachable == 6:
          error_msg = u"Couldn't resolve host."
-      if error_msg is not None:
-         self.parent.footer.set_text("Could not reach custom mirror. Error: %s" % (customurl, reachable))
+      if error_msg:
+         self.parent.footer.set_text("Could not reach custom mirror. Error: %s" % (error_msg))
          return False
+      self.parent.footer.set_text("Reached custom mirror!")
 
       #Ensure valid page with 2XX or 3XX return code
-      status_code = subprocess.check_output(["curl","-o","/dev/null","--silent","--head","--write-out","'%{http_code}'",customurl])
+      status_code = subprocess.check_output(["curl","-o","/dev/null","--silent","--head","--write-out","'\%{http_code}'",customurl])
       import re
       regexp = re.compile(r'[23]\d\d')
       if regexp.search(status_code) is not None:
@@ -70,6 +73,8 @@ class mirrors(urwid.WidgetWrap):
          log.error("Could not reach custom url %s. Error code: %s" % (customurl, reachable))
          self.parent.footer.set_text("Could not reach custom url %s. Error code: %s" % (customurl, reachable))
          return False
+
+    self.parent.footer.set_text("Repo mirror OK!")
     return True
 
   def radioSelect(self, obj, anotherarg):
@@ -78,43 +83,25 @@ class mirrors(urwid.WidgetWrap):
 
   def screenUI(self):
     #Define your text labels, text fields, and buttons first
-    text1 = urwid.Text(u"Choose repo mirrors to use.\n"
+    text1 = TextLabel(u"Choose repo mirrors to use.\n"
      u"Note: Refer to Fuel documentation on how to set up a custom mirror.")
     choice_list = [u"Default", u"Custom"]
-    self.rb_group = []
-    self.repochoice = choice_list[0]
-    self.choices = urwid.Padding(urwid.GridFlow(
-            [urwid.AttrWrap(urwid.RadioButton(self.rb_group,
-                txt, on_state_change=self.radioSelect), 'buttn','buttnf')
-                for txt in choice_list],
-            13, 3, 1, 'left') ,
-            left=4, right=3, min_width=13)
- 
-    edit1_cap = "Custom URL: "
-    edit1_def = DEFAULTS["custom_mirror"]
-    self.edit1 = urwid.AttrWrap(urwid.Edit(('important', edit1_cap.ljust(15)), edit1_def),
-                'editbx', 'editfc')
-    edit2_cap = "Squid parent proxy: "
-    edit2_def = DEFAULTS["parent_proxy"]
-    self.edit2 = urwid.AttrWrap(urwid.Edit(('important', edit2_cap), edit2_def),
-                'editbx', 'editfc')
-    edit3_cap = "Port: "
-    edit3_def = DEFAULTS["port"]
-    self.edit3 = urwid.AttrWrap(urwid.Edit(('important', edit3_cap), edit3_def),
-                'editbx', 'editfc')
-    self.proxyedits = urwid.Padding(urwid.GridFlow([self.edit2, self.edit3],
-                      61, 2, 0, 'left'),
-                      left=0, right=0, min_width=70)
-                       
-    #Disable wrapper
-    #self.edit1 = urwid.WidgetDisable(self.edit1_real)
-    button_check = urwid.Button("Check", self.check)
-   
+    self.choices = ChoicesGroup(self, choice_list)
+    self.repochoice = "Default"
+    self.edit1 = TextField("custom_mirror", "Custom URL:", 15, DEFAULTS["custom_mirror"])
+    self.edit2 = TextField("parent_proxy", "Squid parent proxy:", 20, DEFAULTS["parent_proxy"])
+    self.edit3 = TextField("port", "Port:", 5, DEFAULTS["parent_proxy"])
+    self.proxyedits = Columns([('weight', 3, self.edit2), self.edit3])
 
-    #Add listeners 
+    #Button to check
+    button_check = urwid.Button("Check", self.check)
+    #Button to apply (and check again)
+    button_apply = urwid.Button("Apply", self.apply)
+    #Wrap into Columns so it doesn't expand and look ugly
+    check_col = Columns([button_check, button_apply,('weight',7,blank)])
     
     #Build all of these into a list
-    self.listbox_content = [ text1, blank, blank, self.choices, blank, self.edit1, blank, self.proxyedits, button_check ]
+    self.listbox_content = [ text1, blank, blank, self.choices, blank, self.edit1, blank, self.proxyedits, blank, blank, check_col ]
    
     #Add everything into a ListBox and return it
     self.myscreen = urwid.ListBox(urwid.SimpleListWalker(self.listbox_content))

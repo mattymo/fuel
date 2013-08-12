@@ -49,7 +49,7 @@ class Loader:
         return (self.modlist,self.choices)
 
 
-version="2.1.1"
+version="3.1"
 #choices= u"Status,Networking,OpenStack Setup,Terminal,Save & Quit".split(',')
 class FuelSetup():
 
