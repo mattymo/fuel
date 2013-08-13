@@ -11,7 +11,7 @@ def TextField(keyword, label, width, default_value=None, tooltip=None, toolbar=N
     wrapped_obj = urwid.AttrWrap(edit_obj, 'editbx', 'editfc')
     return wrapped_obj
 
-def ChoicesGroup(self, choices, default_value=None):
+def ChoicesGroup(self, choices, default_value=None, fn=None):
     """Returns list of RadioButtons and  a horizontal Urwid GridFlow with 
        radio choices on one line."""
     rb_group = []
@@ -23,9 +23,9 @@ def ChoicesGroup(self, choices, default_value=None):
         #   is_default = True if txt == default_value else False
         is_default = True if txt == default_value else False
         radio_button = urwid.AttrWrap(urwid.RadioButton(rb_group,
-                txt, on_state_change=self.radioSelect, user_data=txt), 'buttn','buttnf')
+                txt, on_state_change=fn, user_data=txt), 'buttn','buttnf')
                 #txt, is_default, on_state_change=self.radioSelect, user_data=txt), 'buttn','buttnf')
-    wrapped_choices = urwid.Padding(urwid.GridFlow(rb_group, 13, 3, 1, 
+    wrapped_choices = urwid.Padding(urwid.GridFlow(rb_group, 13, 3, 0, 
                 'left'), left=4, right=3, min_width=13)
     return wrapped_choices
  

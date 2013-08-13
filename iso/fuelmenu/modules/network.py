@@ -14,7 +14,10 @@ log = logging.getLogger('fuelmenu.mirrors')
 log.info("test")
 blank = urwid.Divider()
 
-
+#Need to define fields in order so it will render correctly
+fields = ["hostname", "domain", "mgmt_if","dhcp_start","dhcp_end","blank",
+          "blank","ext_if","blank","ext_dhcp","ext_ip","ext_netmask",
+          "ext_gateway","ext_dns"]
 DEFAULTS = {
   "dhcp_start" : { "label"  : "DHCP Pool Start",
                    "tooltip": "Used for defining Floating IP range",
@@ -28,8 +31,23 @@ DEFAULTS = {
   "ext_if"     : { "label"  : "External Interface",
                    "tooltip": "This is the EXTERNAL network for Internet access",
                    "value"  : "eth1"},
+  "ext_dhcp"   : { "label"  : "Use automatic DHCP config for external network",
+                   "tooltip": "",
+                   "value"  : "radio"},
+  "ext_ip"     : { "label"  : "External IP",
+                   "tooltip": "Manual IP address for external network (example 192.168.1.2)",
+                   "value"  : ""},
+  "ext_netmask": { "label"  : "External Netmask",
+                   "tooltip": "Manual netmask for external network (example 255.255.255.0)",
+                   "value"  : "255.255.255.0"},
+  "ext_gateway": { "label"  : "External Gateway",
+                   "tooltip": "Manual gateway to access Internet (example 192.168.1.1)",
+                   "value"  : ""},
+  "ext_dns"    : { "label"  : "External DNS",
+                   "tooltip": "DNS server to handle DNS requests (example 8.8.8.8)",
+                   "value"  : ""},
   "domain"     : { "label"  : "Domain",
-                   "tooltip": "Domain suffix to give all nodes in your cluster",
+                   "tooltip": "Domain suffix to user for all nodes in your cluster",
                    "value"  : "local"},
   "hostname"   : { "label"  : "Hostname",
                    "tooltip": "Hostname to use for Fuel master node",
@@ -39,7 +57,7 @@ YAMLTREE = "cobbler_common"
 
 
 
-class cobbler(urwid.WidgetWrap):
+class network(urwid.WidgetWrap):
   def __init__(self, parent):
     self.name="Network"
     self.priority=20
@@ -48,11 +66,12 @@ class cobbler(urwid.WidgetWrap):
     self.getNetwork()
     self.gateway=self.get_default_gateway_linux()
     self.activeiface = sorted(self.netsettings.keys())[0]
+    self.extdhcp=True
     self.parent = parent
     self.screen = self.screenUI()
      
   def check(self, args):
-    #TODO: Ensure all params are filled out and sensible
+     
     return True
 
   def apply(self, args):
@@ -95,12 +114,8 @@ class cobbler(urwid.WidgetWrap):
 
             return socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
 
-  #def radioSelect(self, obj, anotherarg):
-  def radioSelect(self, current, state, user_data=None):
+  def radioSelectIface(self, current, state, user_data=None):
     """Update network details and display information"""
-    #log = logging.getLogger('fuelmenu.mirrors')
-    #log.warning("Asdf")
-    #log.info(current, other)
     ### This makes no sense, but urwid returns the previous object.
     ### The previous object has True state, which is wrong.. 
     ### Somewhere in current.group a RadioButton is set to True.
@@ -114,7 +129,24 @@ class cobbler(urwid.WidgetWrap):
     self.gateway=self.get_default_gateway_linux()
     self.getNetwork()
     self.setNetworkDetails()
-    #self.parent.refreshChildScreen(self.name)
+    return 
+
+  def radioSelectExtIf(self, current, state, user_data=None):
+    """Update network details and display information"""
+    ### This makes no sense, but urwid returns the previous object.
+    ### The previous object has True state, which is wrong.. 
+    ### Somewhere in current.group a RadioButton is set to True.
+    ### Our quest is to find it.
+    for rb in current.group:
+       if rb.get_label() == current.get_label():
+         continue
+       if rb.base_widget.state == True:
+         if rb.base_widget.get_label() == "Yes":
+           self.extdhcp=True
+         else:
+           self.extdhcp=False
+         break
+    self.setExtIfaceFields(self.extdhcp)
     return 
 
   def setNetworkDetails(self):
@@ -123,6 +155,9 @@ class cobbler(urwid.WidgetWrap):
     self.net_text3.set_text("Netmask:          %s" % self.netsettings[self.activeiface]['netmask'])
     self.net_text4.set_text("Default gateway:  %s" % (self.gateway))
 
+  def setExtIfaceFields(self, enabled=True):
+    ###TODO: Define ext iface fields as disabled and then toggle
+    pass
   def screenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = urwid.Text("Master node network settings")
@@ -133,29 +168,39 @@ class cobbler(urwid.WidgetWrap):
     self.net_text3 = TextLabel("")
     self.net_text4 = TextLabel("")
     self.setNetworkDetails()
-    self.net_choices = ChoicesGroup(self, sorted(self.netsettings.keys()))
+    self.net_choices = ChoicesGroup(self, sorted(self.netsettings.keys()), fn=self.radioSelectIface)
 
-    self.edits = dict()
+    self.edits = []
     toolbar = self.parent.footer
-    for key, values in DEFAULTS.items():
+    for key in fields:
+    #for key, values in DEFAULTS.items():
        #Example: key = hostname, label = Hostname, value = fuel-pm
-       caption = values["label"]
-       default = values["value"]
-       tooltip = values["tooltip"]
-       self.edits[key] = TextField(key, caption, 23, default, tooltip, toolbar)
+       if key == "blank":
+         self.edits.append(blank)
+       elif DEFAULTS[key]["value"] == "radio":
+         label = TextLabel(DEFAULTS[key]["label"])
+         choices = ChoicesGroup(self,["Yes", "No"],
+                    default_value="Yes", fn=self.radioSelectExtIf)
+         self.edits.append(Columns([label,choices]))
+       else:
+         caption = DEFAULTS[key]["label"]
+         default = DEFAULTS[key]["value"]
+         tooltip = DEFAULTS[key]["tooltip"]
+         self.edits.append(TextField(key, caption, 23, default, tooltip, toolbar))
+
 
     #Button to check
     button_check = Button("Check", self.check)
     #Button to apply (and check again)
     button_apply = Button("Apply", self.apply)
-    #Wrap into Columns so it doesn't expand and look ugly
+
+    #Wrap buttons into Columns so it doesn't expand and look ugly
     check_col = Columns([button_check, button_apply,('weight',7,blank)])
 
-    #self.listbox_content.extend([net_text1, net_text2, net_text3, net_text4])
     self.listbox_content = [text1, blank, blank]
     self.listbox_content.extend([self.net_text1, self.net_text2, self.net_text3, 
                                  self.net_text4, self.net_choices,blank])
-    self.listbox_content.extend(self.edits.values())
+    self.listbox_content.extend(self.edits)
     self.listbox_content.append(blank)   
     self.listbox_content.append(check_col)   
 

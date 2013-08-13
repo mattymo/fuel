@@ -90,8 +90,8 @@ class FuelSetup():
             log.info(name, self.choices.index(name))
             child = self.children[int(self.choices.index(name))]
         self.childpage = child.screenUI()
-        self.childfill = urwid.Filler(self.childpage, 'middle', 20)
-        self.childbox = urwid.BoxAdapter(self.childfill, 20)
+        self.childfill = urwid.Filler(self.childpage, 'top', 40)
+        self.childbox = urwid.BoxAdapter(self.childfill, 40)
         self.cols = urwid.Columns([
                 ('fixed', 20, urwid.Pile([
                     urwid.AttrMap(self.menubox, 'bright'),
@@ -143,13 +143,13 @@ class FuelSetup():
           sys.exit(1)
 
         #End prep
-        menufill = urwid.Filler(self.menu(u'Menu', self.choices), 'top', 20)
+        menufill = urwid.Filler(self.menu(u'Menu', self.choices), 'top', 40)
         self.menubox = urwid.BoxAdapter(menufill, 40)
 
 
         child = self.children[0]
         self.childpage = child.screenUI()
-        self.childfill = urwid.Filler(self.childpage, 'middle', 20)
+        self.childfill = urwid.Filler(self.childpage, 'top', 20)
         self.childbox = urwid.BoxAdapter(self.childfill, 20)
         self.cols = urwid.Columns([
                 ('fixed', 20, urwid.Pile([
