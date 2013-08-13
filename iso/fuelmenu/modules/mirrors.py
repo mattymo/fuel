@@ -27,6 +27,7 @@ class mirrors(urwid.WidgetWrap):
     self.parent = parent
     self.screen = self.screenUI()
     self.listbox_content = []
+    self.rb_group = []
     self.settings = copy.deepcopy(DEFAULTS)
 
   def apply(self, args):
@@ -78,26 +79,37 @@ class mirrors(urwid.WidgetWrap):
     self.parent.footer.set_text("Repo mirror OK!")
     return True
 
-  def radioSelect(self, obj, anotherarg):
-      self.repochoice = obj.get_label()
-      pass
+  def radioSelect(self, current, state, user_data=None):
+    for rb in current.group:
+       if rb.get_label() == current.get_label():
+         continue
+       if rb.base_widget.state == True:
+         self.repochoice = rb.base_widget.get_label()
+         break
+
+  #def keypress(self, size, key):
+  #  self.parent.footer.set_text("keypress")
+  #def displayTooltip(self, obj):
+  #  focus = obj.get_focus()[0].content
+  #  self.parent.footer.set_text(focus.get_label())
 
   def screenUI(self):
     #Define your text labels, text fields, and buttons first
     text1 = TextLabel(u"Choose repo mirrors to use.\n"
      u"Note: Refer to Fuel documentation on how to set up a custom mirror.")
     choice_list = [u"Default", u"Custom"]
-    self.choices = ChoicesGroup(self, choice_list)
+    self.rb_group, self.choices = ChoicesGroup(self, choice_list)
     self.repochoice = "Default"
-    self.edit1 = TextField("custom_mirror", "Custom URL:", 15, DEFAULTS["custom_mirror"])
-    self.edit2 = TextField("parent_proxy", "Squid parent proxy:", 20, DEFAULTS["parent_proxy"])
-    self.edit3 = TextField("port", "Port:", 5, DEFAULTS["parent_proxy"])
+    #self.edit1 = TextField("custom_mirror", "Custom URL:", 15, DEFAULTS["custom_mirror"], "URL goes here", self.parent.footer)
+    self.edit1 = TextField("custom_mirror", "Custom URL:", 15, DEFAULTS["custom_mirror"], "URL goes here", self.parent.footer)
+    self.edit2 = TextField("parent_proxy", "Squid parent proxy:", 20, DEFAULTS["parent_proxy"], "Squid proxy URL (include http://)", self.parent.footer)
+    self.edit3 = TextField("port", "Port:", 5, DEFAULTS["parent_proxy"], "Squid Proxy port (usually 3128)", self.parent.footer)
     self.proxyedits = Columns([('weight', 3, self.edit2), self.edit3])
 
     #Button to check
-    button_check = urwid.Button("Check", self.check)
+    button_check = Button("Check", self.check)
     #Button to apply (and check again)
-    button_apply = urwid.Button("Apply", self.apply)
+    button_apply = Button("Apply", self.apply)
     #Wrap into Columns so it doesn't expand and look ugly
     check_col = Columns([button_check, button_apply,('weight',7,blank)])
     
@@ -105,6 +117,8 @@ class mirrors(urwid.WidgetWrap):
     self.listbox_content = [ text1, blank, blank, self.choices, blank, self.edit1, blank, self.proxyedits, blank, blank, check_col ]
    
     #Add everything into a ListBox and return it
-    self.myscreen = urwid.ListBox(urwid.SimpleListWalker(self.listbox_content))
+    walker = urwid.SimpleListWalker(self.listbox_content)
+    #urwid.connect_signal(walker, 'modified', self.displayTooltip)
+    self.myscreen = urwid.ListBox(walker)
     return self.myscreen
     

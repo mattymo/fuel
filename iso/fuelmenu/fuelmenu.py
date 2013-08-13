@@ -54,6 +54,7 @@ version="3.1"
 class FuelSetup():
 
     def __init__(self):
+        self.footer = None
         self.frame = None
         self.screen = None
         self.main()
@@ -101,6 +102,27 @@ class FuelSetup():
                     urwid.Divider(" ")]))
                 ], 3)
         self.listwalker[:] = [self.cols]
+
+    def refreshChildScreen(self, name):
+        child = self.children[int(self.choices.index(name))]
+        #Refresh child listwalker
+        child.listwalker[:]=child.listbox_content
+        
+        #reassign childpage top level objects
+        self.childpage = urwid.ListBox(child.listwalker)
+        self.childfill = urwid.Filler(self.childpage, 'middle', 20)
+        self.childbox = urwid.BoxAdapter(self.childfill, 20)
+        self.cols = urwid.Columns([
+                ('fixed', 20, urwid.Pile([
+                    urwid.AttrMap(self.menubox, 'bright'),
+                    urwid.Divider(" ")])),
+                ('weight', 3, urwid.Pile([
+                    urwid.Divider(" "),
+                    self.childbox,
+                    urwid.Divider(" ")]))
+                ], 3)
+        #Refresh top level listwalker
+        #self.listwalker[:] = [self.cols]
 
          
 
@@ -204,6 +226,7 @@ class FuelSetup():
         self.header = urwid.AttrWrap(urwid.Text(text_header), 'header')
         self.footer = urwid.AttrWrap(urwid.Text(text_footer), 'footer')
         self.listwalker = urwid.SimpleListWalker([self.cols])
+        #self.listwalker = urwid.TreeWalker([self.cols])
         self.listbox = urwid.ListBox(self.listwalker)
         #listbox = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
     
