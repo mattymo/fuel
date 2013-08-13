@@ -132,75 +132,15 @@ class FuelSetup():
             u"UP / DOWN / PAGE UP / PAGE DOWN scroll.  F8 exits."
             % version)
         text_footer = (u"Status messages go here.")
-        text_columns1 = [('important', u"Columns"),
-            u" are used to share horizontal screen space.  "
-            u"This one splits the space into two parts with "
-            u"three characters between each column.  The "
-            u"contents of each column is a single widget."]
-    #    text_columns1 = [('important', u"Columns"),
-    #        u" are used to share horizontal screen space.  "
-    #        u"This one splits the space into two parts with "
-    #        u"three characters between each column.  The "
-    #        u"contents of each column is a single widget."]
-        text_columns2 = [u"When you need to put more than one "
-            u"widget into a column you can use a ",('important',
-            u"Pile"), u" to combine two or more widgets."]
-        text_weight = u"Weight %d"
-        text_fixed_9 = u"<Fixed 9>" # should be 9 columns wide
-        text_fixed_14 = u"<--Fixed 14-->" # should be 14 columns wide
-        text_edit_cap1 = ('editcp', u"This is a caption.  Edit here: ")
-        text_edit_text1 = u"editable stuff"
-        text_edit_cap2 = ('editcp', u"This one supports newlines: ")
-        text_edit_text2 = (u"line one starts them all\n"
-            u"== line 2 == with some more text to edit.. words.. whee..\n"
-            u"LINE III, the line to end lines one and two, unless you "
-            u"change something.")
-    
-    
-        radio_button_group = []
     
         blank = urwid.Divider()
-        listbox_content = [
-            blank,
-            urwid.Columns([
-                #urwid.Padding(menu(u'Topics', choices), left=1, right=1,
-                #    min_width=20),
-                urwid.Pile([
-                    #urwid.Padding(urwid.Text(text_columns1)),
-                    urwid.Text(text_columns1),
-                    urwid.Divider("~")]),
-                urwid.Pile([
-                    urwid.Divider("~"),
-                    urwid.Text(text_columns2),
-                    urwid.Divider("_")])
-                ], 3),
-            blank,
-            urwid.Columns([
-                ('weight', 2, urwid.AttrWrap(urwid.Text(
-                    text_weight % 2), 'reverse')),
-                ('fixed', 9, urwid.Text(text_fixed_9)),
-                ('weight', 3, urwid.AttrWrap(urwid.Text(
-                    text_weight % 2), 'reverse')),
-                ('fixed', 14, urwid.Text(text_fixed_14)),
-                ], 0, min_width=8),
-            blank,
-            urwid.AttrWrap(urwid.Edit(text_edit_cap1, text_edit_text1),
-                'editbx', 'editfc'),
-            blank,
-            urwid.AttrWrap(urwid.Edit(text_edit_cap2, text_edit_text2,
-                multiline=True ), 'editbx', 'editfc'),
-            blank,
-    
-            ]
-        #Prepare for child screen
+
+        #Prepare submodules
         loader = Loader(self)
         self.children, self.choices = loader.load_modules(module_dir="./modules")
         if len(self.children) == 0:
           import sys
           sys.exit(1)
-
-
-
 
         #End prep
         menufill = urwid.Filler(self.menu(u'Menu', self.choices), 'top', 20)
@@ -209,8 +149,6 @@ class FuelSetup():
 
         child = self.children[0]
         self.childpage = child.screenUI()
-        #childpage = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
-        #childpage = urwid.Text(text_fixed_14)
         self.childfill = urwid.Filler(self.childpage, 'middle', 20)
         self.childbox = urwid.BoxAdapter(self.childfill, 20)
         self.cols = urwid.Columns([

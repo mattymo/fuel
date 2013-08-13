@@ -48,8 +48,8 @@ class cobbler(urwid.WidgetWrap):
     self.getNetwork()
     self.gateway=self.get_default_gateway_linux()
     self.activeiface = sorted(self.netsettings.keys())[0]
-    self.screen = self.screenUI()
     self.parent = parent
+    self.screen = self.screenUI()
      
   def check(self, args):
     #TODO: Ensure all params are filled out and sensible
@@ -110,7 +110,6 @@ class cobbler(urwid.WidgetWrap):
          continue
        if rb.base_widget.state == True:
          self.activeiface = rb.base_widget.get_label()
-         #self.parent.footer.set_text("%s:%s %s:%s" % (rb.base_widget.get_label(), rb.base_widget.state, self.rb_group[0].base_widget.get_label(), self.rb_group[0].base_widget.state))
          break
     self.gateway=self.get_default_gateway_linux()
     self.getNetwork()
@@ -134,18 +133,16 @@ class cobbler(urwid.WidgetWrap):
     self.net_text3 = TextLabel("")
     self.net_text4 = TextLabel("")
     self.setNetworkDetails()
-    self.rb_group, self.net_choices = ChoicesGroup(self, sorted(self.netsettings.keys()))
-    #self.rb_group, self.net_choices = ChoicesGroup(self, sorted(self.netsettings.keys()),self.activeiface)
+    self.net_choices = ChoicesGroup(self, sorted(self.netsettings.keys()))
 
     self.edits = dict()
-    #toolbar = self.parent.footer
+    toolbar = self.parent.footer
     for key, values in DEFAULTS.items():
        #Example: key = hostname, label = Hostname, value = fuel-pm
        caption = values["label"]
        default = values["value"]
        tooltip = values["tooltip"]
-       self.edits[key] = TextField(key, caption, 23, default)
-       #self.edits[key] = TextField(key, caption, 23, default, tooltip, toolbar)
+       self.edits[key] = TextField(key, caption, 23, default, tooltip, toolbar)
 
     #Button to check
     button_check = Button("Check", self.check)

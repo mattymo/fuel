@@ -27,7 +27,7 @@ def ChoicesGroup(self, choices, default_value=None):
                 #txt, is_default, on_state_change=self.radioSelect, user_data=txt), 'buttn','buttnf')
     wrapped_choices = urwid.Padding(urwid.GridFlow(rb_group, 13, 3, 1, 
                 'left'), left=4, right=3, min_width=13)
-    return rb_group, wrapped_choices
+    return wrapped_choices
  
 def TextLabel(text):
     """Returns an Urwid text object"""

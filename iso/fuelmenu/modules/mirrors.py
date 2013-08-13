@@ -25,10 +25,9 @@ class mirrors(urwid.WidgetWrap):
     self.priority=25
     self.visible=True
     self.parent = parent
-    self.screen = self.screenUI()
     self.listbox_content = []
-    self.rb_group = []
     self.settings = copy.deepcopy(DEFAULTS)
+    self.screen = self.screenUI()
 
   def apply(self, args):
     if not self.check(args):
@@ -98,7 +97,7 @@ class mirrors(urwid.WidgetWrap):
     text1 = TextLabel(u"Choose repo mirrors to use.\n"
      u"Note: Refer to Fuel documentation on how to set up a custom mirror.")
     choice_list = [u"Default", u"Custom"]
-    self.rb_group, self.choices = ChoicesGroup(self, choice_list)
+    self.choices = ChoicesGroup(self, choice_list)
     self.repochoice = "Default"
     #self.edit1 = TextField("custom_mirror", "Custom URL:", 15, DEFAULTS["custom_mirror"], "URL goes here", self.parent.footer)
     self.edit1 = TextField("custom_mirror", "Custom URL:", 15, DEFAULTS["custom_mirror"], "URL goes here", self.parent.footer)
