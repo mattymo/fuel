@@ -7,7 +7,7 @@ import logging
 import sys
 import copy
 sys.path.append("/home/mmosesohn/git/fuel/iso/fuelmenu")
-from fuelmenu import settings
+from settings import *
 from urwidwrapper import *
 log = logging.getLogger('fuelmenu.mirrors')
 log.info("test")
@@ -18,6 +18,7 @@ DEFAULTS = {
 "parent_proxy"  : "",
 "port"          : "3128"
 }
+
 class mirrors(urwid.WidgetWrap):
   def __init__(self, parent):
     self.name="Repo Mirrors"
@@ -32,7 +33,7 @@ class mirrors(urwid.WidgetWrap):
     if not self.check(args):
         log.error("Check failed. Not applying")
         return False
-    conf = settings()
+    conf = Settings()
     conf.write(module="mirrors",values=self.settings)
     
   def check(self, args):
