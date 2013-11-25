@@ -12,32 +12,33 @@ class cinder::volume::iscsi (
     'DEFAULT/iscsi_ip_address': value => $iscsi_ip_address;
     'DEFAULT/iscsi_helper':     value => $iscsi_helper;
     'DEFAULT/volume_group':     value => $volume_group;
-   }
+  }
 
   case $iscsi_helper {
     'tgtadm': {
-        package { 'tgt':
-          name    => $::cinder::params::tgt_package_name,
-          ensure  => present,
-        }
-        service { 'tgtd':
-          name    => $::cinder::params::tgt_service_name,
-          ensure  => running,
-          enable  => true,
-          require => Class['cinder::volume'],
-        }
-        file_line { 'tgtd_include':
+      package { 'tgt':
+        ensure  => present,
+        name    => $::cinder::params::tgt_package_name,
+      }
+      if($::osfamily == 'RedHat') {
+        file_line { 'cinder include':
           path    => '/etc/tgt/targets.conf',
           line    => 'include /etc/cinder/volumes/*',
-          require => Package["tgt"],
-          before  => Service["tgtd"],
-          notify  => Service["tgtd"]
+          match   => '#?include /',
+          require => Package['tgt'],
+          notify  => Service['tgtd'],
         }
-    }
+      }
 
+      service { 'tgtd':
+        ensure  => running,
+        name    => $::cinder::params::tgt_service_name,
+        enable  => true,
+        require => Class['cinder::volume'],
+      }
+    }
     'ietadm': {
         package { ['iscsitarget', 'iscsitarget-dkms']:
-          # name   => $::nova::params::iet_package_name,
           ensure => present,
         }
         exec { 'enable_iscsitarget':
@@ -47,15 +48,15 @@ class cinder::volume::iscsi (
           notify  => Service['iscsitarget'],
         }
         service { 'iscsitarget':
-          name     => $::nova::params::iet_service_name,
-          # provider => $::nova::params::special_service_provider,
           ensure   => running,
+          name     => $::nova::params::iet_service_name,
           enable   => true,
-          require  => [Class['cinder::volume'], Package['iscsitarget', 'iscsitarget-dkms']],
+          require  => [Class['cinder::volume'], Package['iscsitarget',
+                        'iscsitarget-dkms']],
         }
     }
     default: {
-        fail("Unsupported iscsi helper: ${iscsi_helper}.")
+      fail("Unsupported iscsi helper: ${iscsi_helper}.")
     }
   }
 

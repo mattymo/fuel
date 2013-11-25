@@ -1,39 +1,24 @@
 # $volume_name_template = volume-%s
 class cinder::volume (
-  $package_ensure = 'latest',
+  $package_ensure = 'present',
   $enabled        = true
 ) {
 
   include cinder::params
 
-  if ($::cinder::params::volume_package) { 
-    $volume_package = $::cinder::params::volume_package
-    Package['cinder'] -> Package[$volume_package]
-
-    package { 'cinder-volume':
-      name   => $volume_package,
-      ensure => $package_ensure,
-    }
-  } else {
-    $volume_package = $::cinder::params::package_name
-  }
-  
-  case $::osfamily {
-    "Debian":  {
-      File[$::cinder::params::cinder_conf] -> Cinder_config<||>
-      File[$::cinder::params::cinder_paste_api_ini] -> Cinder_api_paste_ini<||>
-      Cinder_config <| |> -> Package['cinder-volume']
-      Cinder_api_paste_ini<||> -> Package['cinder-volume']
-    }
-    "RedHat": {
-      Package[$volume_package] -> Cinder_api_paste_ini<||>
-      Package[$volume_package] -> Cinder_config<||>
-    }
-  }
   Cinder_config<||> ~> Service['cinder-volume']
-  Cinder_config<||> ~> Exec['cinder-manage db_sync']
   Cinder_api_paste_ini<||> ~> Service['cinder-volume']
-  Exec['cinder-manage db_sync'] -> Service['cinder-volume']
+  Exec<| title == 'cinder-manage db_sync' |> ~> Service['cinder-volume']
+
+  if ($::cinder::params::volume_package) {
+    Package['cinder-volume'] -> Cinder_config<||>
+    Package['cinder-volume'] -> Cinder_api_paste_ini<||>
+    Package['cinder']        -> Package['cinder-volume']
+    Package['cinder-volume'] -> Service['cinder-volume']
+    package { 'cinder-volume':
+      ensure => $package_ensure,
+      name   => $::cinder::params::volume_package,
+    }
 
   if $enabled {
     $ensure = 'running'
@@ -42,11 +27,11 @@ class cinder::volume (
   }
 
   service { 'cinder-volume':
+    ensure    => $ensure,
     name      => $::cinder::params::volume_service,
     enable    => $enabled,
-    ensure    => $ensure,
-    require   => Package[$volume_package],
-    subscribe => File[$::cinder::params::cinder_conf],
+    hasstatus => true,
+    require   => Package['cinder'],
   }
 
 }
