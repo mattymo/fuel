@@ -98,10 +98,16 @@ class cinder::api (
 
   if $enabled {
 
-    #Cinder_config<||> ~> Exec['cinder-manage db_sync']
-    #Exec['cinder-manage db_sync'] -> Service['cinder-api']##
-    Cinder_config<||> ~> Exec<| title == 'cinder-manage db_sync' |>
-    Exec<| title == 'cinder-manage db_sync' |> -> Service['cinder-api']##
+    Cinder_config<||> ~> Exec['cinder-manage db_sync']
+    exec { 'cinder-manage db_sync':
+      command     => $::cinder::params::db_sync_command,
+      path        => '/usr/bin',
+      user        => 'cinder',
+      refreshonly => true,
+      logoutput   => 'on_failure',
+      require     => Package['cinder'],
+    }
+    Exec['cinder-manage db_sync'] -> Service['cinder-api']
     $ensure = 'running'
   } else {
     $ensure = 'stopped'
