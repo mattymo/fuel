@@ -19,7 +19,7 @@ class cinder::volume (
       ensure => $package_ensure,
       name   => $::cinder::params::volume_package,
     }
-
+  }
   if $enabled {
     $ensure = 'running'
   } else {

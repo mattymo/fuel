@@ -71,7 +71,7 @@ class openstack::cinder(
     package_ensure  => $::openstack_version['cinder'],
     queue_provider  => $queue_provider,
     rabbit_password => $rabbit_password,
-    rabbit_hosts    => $rabbit_hosts,
+    rabbit_hosts    => $rabbit_nodes,
     qpid_password   => $qpid_password,
     qpid_userid     => $qpid_user,
     qpid_hosts      => $qpid_hosts,

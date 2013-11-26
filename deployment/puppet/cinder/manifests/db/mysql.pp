@@ -12,9 +12,9 @@ class cinder::db::mysql (
   include cinder::params
 
   Class['mysql::server'] -> Class['cinder::db::mysql']
-  if $::osfamily == "Debian" {
-    Class['cinder::db::mysql'] -> Package['cinder-api']
-  }
+  #if $::osfamily == "Debian" {
+  #  Class['cinder::db::mysql'] -> Package['cinder-api']
+  #}
   Class['cinder::db::mysql'] -> Exec<| title == 'cinder-manage db_sync' |>
   Database[$dbname] ~> Service<| title == 'cinder-manage db_sync' |>
 
@@ -27,13 +27,18 @@ class cinder::db::mysql (
     password     => $password,
     host         => $host,
     charset      => $charset,
-    # I may want to inject some sql
     require      => Class['mysql::server'],
   }
+  # Check allowed_hosts to avoid duplicate resource declarations
+  if is_array($allowed_hosts) and delete($allowed_hosts,$host) != [] {
+    $real_allowed_hosts = delete($allowed_hosts,$host)
+  } elsif is_string($allowed_hosts) and ($allowed_hosts != $host) {
+    $real_allowed_hosts = $allowed_hosts
+  }
 
-  if $allowed_hosts {
-     # TODO this class should be in the mysql namespace
-     cinder::db::mysql::host_access { $allowed_hosts:
+  if $real_allowed_hosts {
+    # TODO this class should be in the mysql namespace
+    cinder::db::mysql::host_access { $real_allowed_hosts:
       user      => $user,
       password  => $password,
       database  => $dbname,

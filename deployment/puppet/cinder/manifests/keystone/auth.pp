@@ -75,7 +75,9 @@ class cinder::keystone::auth (
   }
 
   if $configure_endpoint {
-    keystone_endpoint { "${region}/${auth_name}":
+    #Need to patch keystone_endpoint to handle region
+    #keystone_endpoint { "${region}/${auth_name}":
+    keystone_endpoint { "${auth_name}":
       ensure       => present,
       public_url   => "${public_protocol}://${public_address}:${port}/${volume_version}/%(tenant_id)s",
       admin_url    => "http://${admin_address}:${port}/${volume_version}/%(tenant_id)s",

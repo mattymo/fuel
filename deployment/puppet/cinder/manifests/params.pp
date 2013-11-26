@@ -37,6 +37,8 @@ class cinder::params {
       $tgt_service_name  = 'tgtd'
 
       $volume_opts_file  = '/etc/sysconfig/openstack-cinder-volume'
+      $ceph_init_override = '/etc/sysconfig/openstack-cinder-volume'
+
       $python_path       = 'python2.6/site-packages'
       $qemuimg_package_name = $::operatingsystem ? {
                                 redhat => 'qemu-img-rhev',
